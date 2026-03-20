@@ -892,7 +892,9 @@ class BatchedTTTLoRA(nn.Module):
         self.lm_head_lora = BatchedLinearLoRA(bsz, dim, vocab, rank)
         self.q_loras = nn.ModuleList()
         self.v_loras = nn.ModuleList()
-        for block in model.blocks:
+        num_steps = model.num_encoder_layers + model.num_decoder_layers
+        for i in range(num_steps):
+            block = model.blocks[i % model.num_unique_layers]
             self.q_loras.append(
                 BatchedLinearLoRA(bsz, dim, block.attn.c_q.weight.shape[0], rank)
             )
