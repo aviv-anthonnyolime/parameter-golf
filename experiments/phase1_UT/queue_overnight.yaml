@@ -3,6 +3,10 @@
 #
 # Runs 6 experiments sequentially, commits + pushes results after each.
 # Total estimated time on g5dn.12xlarge (4×A10G): ~3.5 hours
+#
+# GRAD_ACCUM_STEPS=1: on 4-GPU machines the default formula gives grad_accum=2
+# (step time ~1200ms). Override to 1 for ~600ms/step; global batch stays the
+# same (524288 tokens) because each GPU handles a larger single micro-batch.
 
 script: experiments/phase1_UT/train_gpt_ut.py
 nproc: 4
@@ -15,6 +19,7 @@ defaults:
   TRAIN_LOG_EVERY: "10"
   WANDB_ENABLED: "1"
   WANDB_PROJECT: Openai-challenge-parameter-golf
+  GRAD_ACCUM_STEPS: "1"
 
 runs:
   # --- Depth sweep (fixed dim=512, unique=1) ---

@@ -110,9 +110,14 @@ class Hyperparameters:
     wandb_entity = os.environ.get("WANDB_ENTITY", "citaman")
     wandb_project = os.environ.get("WANDB_PROJECT", "Openai-challenge-parameter-golf")
 
+    # Override gradient accumulation steps (0 = auto: 8 // world_size).
+    # Set to 1 on 4-GPU machines to halve step time (halves effective batch; adjust TRAIN_BATCH_TOKENS if needed).
+    grad_accum_steps_override = int(os.environ.get("GRAD_ACCUM_STEPS", "0"))
+
     # Training length.
     iterations = int(os.environ.get("ITERATIONS", 20000))
-    warmdown_iters = int(os.environ.get("WARMDOWN_ITERS", 1200))
+    # Warmdown disabled by default for sweeps. Set to 1200 for final 8xH100 runs.
+    warmdown_iters = int(os.environ.get("WARMDOWN_ITERS", 0))
     warmup_steps = int(os.environ.get("WARMUP_STEPS", 20))
     train_batch_tokens = int(os.environ.get("TRAIN_BATCH_TOKENS", 524_288))
     train_seq_len = int(os.environ.get("TRAIN_SEQ_LEN", 1024))
@@ -150,6 +155,7 @@ class Hyperparameters:
     grad_clip_norm = float(os.environ.get("GRAD_CLIP_NORM", 0.0))
 
     # Test-time training (LoRA) hyperparameters.
+    skip_ttt = int(os.environ.get("SKIP_TTT", 0))
     ttt_lora_rank = int(os.environ.get("TTT_LORA_RANK", 8))
     ttt_lora_lr = float(os.environ.get("TTT_LORA_LR", 0.01))
     ttt_chunk_size = int(os.environ.get("TTT_CHUNK_SIZE", 256))
@@ -1200,11 +1206,15 @@ def main() -> None:
     local_rank = int(os.environ.get("LOCAL_RANK", "0"))
     if world_size <= 0:
         raise ValueError(f"WORLD_SIZE must be positive, got {world_size}")
-    if 8 % world_size != 0:
-        raise ValueError(
-            f"WORLD_SIZE={world_size} must divide 8 so grad_accum_steps stays integral"
-        )
-    grad_accum_steps = 8 // world_size
+    _grad_accum_override = int(os.environ.get("GRAD_ACCUM_STEPS", "0"))
+    if _grad_accum_override > 0:
+        grad_accum_steps = _grad_accum_override
+    else:
+        if 8 % world_size != 0:
+            raise ValueError(
+                f"WORLD_SIZE={world_size} must divide 8 so grad_accum_steps stays integral"
+            )
+        grad_accum_steps = 8 // world_size
     grad_scale = 1.0 / grad_accum_steps
     if not torch.cuda.is_available():
         raise RuntimeError("CUDA is required")
@@ -1697,24 +1707,28 @@ def main() -> None:
     )
 
     # LoRA test-time training evaluation (the competition score)
-    torch._dynamo.reset()
-    torch.cuda.synchronize()
-    t_ttt = time.perf_counter()
-    ttt_val_loss, ttt_val_bpb = eval_val_ttt_lora(
-        args,
-        base_model,
-        rank,
-        world_size,
-        device,
-        base_bytes_lut,
-        has_leading_space_lut,
-        is_boundary_token_lut,
-    )
-    torch.cuda.synchronize()
-    log0(
-        f"final_int8_ttt_lora val_loss:{ttt_val_loss:.4f} val_bpb:{ttt_val_bpb:.4f} "
-        f"eval_time:{1000.0 * (time.perf_counter() - t_ttt):.0f}ms"
-    )
+    if args.skip_ttt:
+        log0("SKIP_TTT=1 → skipping TTT LoRA evaluation")
+        ttt_val_loss, ttt_val_bpb = None, None
+    else:
+        torch._dynamo.reset()
+        torch.cuda.synchronize()
+        t_ttt = time.perf_counter()
+        ttt_val_loss, ttt_val_bpb = eval_val_ttt_lora(
+            args,
+            base_model,
+            rank,
+            world_size,
+            device,
+            base_bytes_lut,
+            has_leading_space_lut,
+            is_boundary_token_lut,
+        )
+        torch.cuda.synchronize()
+        log0(
+            f"final_int8_ttt_lora val_loss:{ttt_val_loss:.4f} val_bpb:{ttt_val_bpb:.4f} "
+            f"eval_time:{1000.0 * (time.perf_counter() - t_ttt):.0f}ms"
+        )
 
     # --- Save JSONL results (rank 0 only) ---
     if master_process:
@@ -1732,8 +1746,8 @@ def main() -> None:
             "val_bpb": round(float(val_bpb), 6),
             "val_loss_int8": round(float(q_val_loss), 6),
             "val_bpb_int8": round(float(q_val_bpb), 6),
-            "val_loss_ttt": round(float(ttt_val_loss), 6),
-            "val_bpb_ttt": round(float(ttt_val_bpb), 6),
+            "val_loss_ttt": round(float(ttt_val_loss), 6) if ttt_val_loss is not None else None,
+            "val_bpb_ttt": round(float(ttt_val_bpb), 6) if ttt_val_bpb is not None else None,
             "compressed_size_bytes": quant_file_bytes,
             "compressed_size_mb": round(quant_file_bytes / 1024**2, 2),
             "peak_memory_mib": torch.cuda.max_memory_allocated() // 1024 // 1024,
