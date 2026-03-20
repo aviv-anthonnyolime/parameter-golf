@@ -85,6 +85,16 @@ VAL_BATCH_SIZE=8192 \
 python3 train_gpt_mlx.py
 ```
 
+```bash
+RUN_ID=mlx_smoke \
+ITERATIONS=200 \
+TRAIN_LOG_EVERY=20 \
+TRAIN_BATCH_TOKENS=8192 \
+VAL_LOSS_EVERY=0 \
+VAL_BATCH_SIZE=8192 \
+python3 train_gpt_mlx.py
+```
+
 Validation always runs on the full `fineweb_val_*` split, which is the fixed first-50k-document set. The smoke command above skips periodic validation and just prints the final `val_loss` and `val_bpb` once at the end.
 
 ### Scaling Up to a Remote Machine
@@ -134,6 +144,38 @@ By default, this command prints `train_loss` step logs during training and print
 For dataset export, tokenizer export, and docs-cache rebuild instructions, see [data/README.md](data/README.md).
 
 Evaluation will be in the RunPod environment with all packages installed. `requirements.txt` is provided as a reference if you want to self-setup.
+
+#### Setting Up on Amazon Linux 2 (AWS / SageMaker)
+
+If you're running on an Amazon Linux 2 instance (e.g. `g5dn.12xlarge` on SageMaker), three issues need to be addressed:
+
+- **GCC 7** (default) — NumPy 2.x requires GCC >= 9.3. GCC 10 is already installed but under a different binary name.
+- **CMake 2.8** (default) — `sentencepiece` and `pyarrow` require CMake >= 3.12.
+- **SageMaker volume is only 4.8GB** — PyTorch + CUDA libs are ~2GB+. The venv must live on the root filesystem (`/`, 135GB) not in `/home/ec2-user/SageMaker`.
+
+The setup script handles all four automatically with no changes to training code.
+
+**First run** (creates venv, symlinks, installs deps):
+
+```bash
+bash scripts/setup_aws_al2.sh
+```
+
+**After each restart** (re-exports compilers, re-activates venv — skips reinstall):
+
+```bash
+source /opt/pg-venv/bin/activate
+bash scripts/setup_aws_al2.sh --skip-install
+```
+
+**How the data symlinks work:** `data/datasets` and `data/tokenizers` are symlinked to `/opt/pg-data/` on the root filesystem (135GB free). The download script and `train_gpt.py` follow the symlinks transparently — no code changes needed.
+
+```text
+data/datasets   →  /opt/pg-data/datasets   (large .bin files, ~20GB)
+data/tokenizers →  /opt/pg-data/tokenizers (small tokenizer models)
+```
+
+> **Note:** CC/CXX exports only last for the current shell session.
 
 ## FAQ
 

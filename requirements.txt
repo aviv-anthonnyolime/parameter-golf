@@ -5,6 +5,8 @@ huggingface-hub
 kernels
 setuptools
 typing-extensions==4.15.0
-datasets
+pyarrow<19
+datasets<4
 tiktoken
 sentencepiece
+wandb
