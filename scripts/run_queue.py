@@ -40,6 +40,23 @@ import sys
 import time
 from pathlib import Path
 
+
+def load_dotenv(env_path: Path, overwrite: bool = False):
+    """Load key=value pairs from a .env file into os.environ."""
+    if not env_path.exists():
+        return
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and (overwrite or key not in os.environ):
+                os.environ[key] = value
+    print(f"  [.env] Loaded from {env_path}")
+
 try:
     import yaml
 except ImportError:
@@ -150,6 +167,11 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Show commands without executing")
     parser.add_argument("--no-push", action="store_true", help="Commit but don't push to remote")
     args = parser.parse_args()
+
+    # Load env vars from repo root — .env is the template (committed), .env.local has real values (gitignored)
+    repo_root = Path(__file__).resolve().parent.parent
+    load_dotenv(repo_root / ".env")             # base defaults, no overwrite
+    load_dotenv(repo_root / ".env.local", overwrite=True)  # local secrets, overrides .env
 
     queue_path = Path(args.queue_file)
     if not queue_path.exists():
