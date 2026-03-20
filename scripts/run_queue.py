@@ -121,6 +121,17 @@ def git_commit_and_push(result: dict, push: bool = True):
             print(f"  [git] Push failed: {push_result.stderr.strip()}")
 
 
+def _kill_stale_torchrun():
+    """Kill any leftover torchrun/torch.distributed processes to prevent NCCL conflicts."""
+    for pattern in ["torchrun", "torch.distributed.run"]:
+        subprocess.run(
+            ["pkill", "-9", "-f", pattern],
+            capture_output=True,
+        )
+    # Give GPUs a moment to release NCCL resources
+    time.sleep(2)
+
+
 def run_single(script: str, nproc: int, env_vars: dict, run_index: int, total: int, dry_run: bool):
     """Execute a single training run."""
     run_id = env_vars.get("RUN_ID", f"run_{run_index}")
@@ -139,9 +150,14 @@ def run_single(script: str, nproc: int, env_vars: dict, run_index: int, total: i
         print("  [DRY RUN] Skipping execution")
         return None
 
+    # Kill stale processes from previous runs to prevent NCCL conflicts
+    _kill_stale_torchrun()
+
     # Merge env
     full_env = os.environ.copy()
     full_env.update({k: str(v) for k, v in env_vars.items()})
+    # Fail fast on NCCL errors instead of hanging for 10 minutes
+    full_env.setdefault("NCCL_TIMEOUT", "120")
 
     t0 = time.time()
     proc = subprocess.run(
