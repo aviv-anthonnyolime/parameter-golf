@@ -106,6 +106,7 @@ class Hyperparameters:
 
     # Weights & Biases.
     wandb_enabled = bool(int(os.environ.get("WANDB_ENABLED", "0")))
+    wandb_api_key = os.environ.get("WANDB_API_KEY", "")
     wandb_entity = os.environ.get("WANDB_ENTITY", "citaman")
     wandb_project = os.environ.get("WANDB_PROJECT", "Openai-challenge-parameter-golf")
 
@@ -1249,6 +1250,8 @@ def main() -> None:
     # --- W&B init (rank 0 only) ---
     wandb_run = None
     if master_process and args.wandb_enabled and _WANDB_AVAILABLE:
+        if args.wandb_api_key:
+            wandb.login(key=args.wandb_api_key)
         hp_dict = {k: v for k, v in vars(args.__class__).items() if not k.startswith("_")}
         wandb_run = wandb.init(
             entity=args.wandb_entity,

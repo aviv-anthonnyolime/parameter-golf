@@ -215,6 +215,19 @@ Environment variables:
 | `WANDB_PROJECT`   | `Openai-challenge-parameter-golf`    | W&B project name                                         |
 | `TRAIN_LOG_EVERY` | `10`                                 | Log training metrics every N steps (both console and W&B)|
 
+**API key setup** — the queue runner loads credentials automatically:
+
+- `.env` — committed template, lists all variables with placeholder values (safe to commit)
+- `.env.local` — your actual secrets, **gitignored**, never committed
+
+```bash
+# One-time setup: copy template and fill in your W&B key
+cp .env .env.local
+# then edit .env.local and set WANDB_API_KEY=<your key>
+```
+
+`.env.local` overrides `.env`. Existing shell env vars are never overwritten, so you can still pass keys inline if needed.
+
 #### Results Tracking (JSONL)
 
 After each run completes, results are automatically appended to two JSONL files:
