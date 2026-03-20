@@ -22,6 +22,20 @@ runs:
     MODEL_DIM: "512"
     MLP_MULT: "2"
 
+  # Try half 
+  - RUN_ID: test_10L_5U_512d
+    NUM_LAYERS: "10"
+    NUM_UNIQUE_LAYERS: "5"
+    MODEL_DIM: "512"
+    MLP_MULT: "2"
+
+  # Try 3 with wider
+  - RUN_ID: test_9L_2U_512d
+    NUM_LAYERS: "9"
+    NUM_UNIQUE_LAYERS: "3"
+    MODEL_DIM: "640"
+    MLP_MULT: "2"
+
   # Try more unique layers
   - RUN_ID: test_10L_2U_512d
     NUM_LAYERS: "10"
