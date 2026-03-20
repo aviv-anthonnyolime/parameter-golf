@@ -13,6 +13,7 @@ defaults:
   TRAIN_LOG_EVERY: "10"
   WANDB_ENABLED: "1"
   WANDB_PROJECT: Openai-challenge-parameter-golf
+  SKIP_TTT: "1"          # skip ~10min TTT LoRA eval; set "0" for final/overnight runs
 
 runs:
   # Baseline: 10L-1U-512d

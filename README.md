@@ -177,6 +177,31 @@ data/tokenizers →  /opt/pg-data/tokenizers (small tokenizer models)
 
 > **Note:** CC/CXX exports only last for the current shell session.
 
+#### Git Push via SSH (Remote Machines)
+
+The queue runner auto-commits and pushes results after each run. GitHub no longer supports password authentication, so you must use SSH keys. Without this, pushes will fail with `Invalid username or token`.
+
+Run the setup script **on your remote machine** (RunPod / AWS):
+
+```bash
+bash scripts/setup_git_ssh.sh
+```
+
+This will:
+1. Generate an ED25519 SSH key (if none exists)
+2. Print the public key — copy it and add it at https://github.com/settings/ssh/new
+3. Switch the `origin` remote from HTTPS to SSH automatically
+4. Test the connection
+
+If you've already set up SSH keys on the machine, the script will skip key generation and just fix the remote URL.
+
+Alternatively, if you prefer HTTPS with a token, you can set the remote manually:
+
+```bash
+# Using a GitHub Personal Access Token (PAT)
+git remote set-url origin https://<YOUR_TOKEN>@github.com/<owner>/parameter-golf.git
+```
+
 ### Experiment Tooling
 
 The repo includes tooling for tracking experiments, queuing overnight runs, and visualizing results. Install the extra dependencies first:
@@ -343,6 +368,22 @@ NUM_LAYERS=12 MODEL_DIM=640 python scripts/model_size.py experiments/phase1_UT/t
 NPROC=8 GPU_MEM_GB=80 python scripts/model_size.py experiments/phase1_UT/train_gpt_ut.py
 ```
 
+#### Killing a Training Run
+
+If you need to stop a training run (stuck process, wrong config, etc.), use the kill script:
+
+```bash
+bash scripts/kill_training.sh
+```
+
+This will:
+1. Gracefully kill processes in dependency order: `run_queue.py` → `torchrun` → `torch.distributed` → `train_gpt`
+2. Wait 2 seconds, then force-kill (`SIGKILL`) anything still alive
+3. Clean up orphaned NCCL shared memory (`/dev/shm/nccl-*`)
+4. Print current GPU status so you can confirm resources are freed
+
+Safe to run multiple times — won't error if nothing is running.
+
 #### Scripts Summary
 
 | Script                 | Description                                                      |
@@ -352,6 +393,8 @@ NPROC=8 GPU_MEM_GB=80 python scripts/model_size.py experiments/phase1_UT/train_g
 | `scripts/promote.py`   | Pick best local runs and generate RunPod 8×H100 queue            |
 | `scripts/model_size.py`| Estimate compressed model size + GPU memory for DDP training     |
 | `scripts/naming.py`    | Docker-style adjective-animal name generator (used internally)   |
+| `scripts/kill_training.sh` | Kill all training processes and free GPU resources            |
+| `scripts/setup_git_ssh.sh` | Set up SSH-based git push on remote machines                 |
 
 ## FAQ
 
