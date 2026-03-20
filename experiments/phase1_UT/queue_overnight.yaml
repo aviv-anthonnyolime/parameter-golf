@@ -1,0 +1,58 @@
+# Overnight ablation sweep — leave running before sleep
+# Usage: python scripts/run_queue.py experiments/phase1_UT/queue_overnight.yaml
+#
+# Runs 6 experiments sequentially, commits + pushes results after each.
+# Total estimated time on g5dn.12xlarge (4×A10G): ~3.5 hours
+
+script: experiments/phase1_UT/train_gpt_ut.py
+nproc: 4
+
+defaults:
+  DATA_PATH: ./data/datasets/fineweb10B_sp1024
+  TOKENIZER_PATH: ./data/tokenizers/fineweb_1024_bpe.model
+  VOCAB_SIZE: "1024"
+  MAX_WALLCLOCK_SECONDS: "2000"
+  TRAIN_LOG_EVERY: "10"
+  WANDB_ENABLED: "1"
+  WANDB_PROJECT: Openai-challenge-parameter-golf
+
+runs:
+  # --- Depth sweep (fixed dim=512, unique=1) ---
+  - RUN_ID: sweep_8L_512d
+    NUM_LAYERS: "8"
+    NUM_UNIQUE_LAYERS: "1"
+    MODEL_DIM: "512"
+    MLP_MULT: "2"
+
+  - RUN_ID: sweep_10L_512d
+    NUM_LAYERS: "10"
+    NUM_UNIQUE_LAYERS: "1"
+    MODEL_DIM: "512"
+    MLP_MULT: "2"
+
+  - RUN_ID: sweep_12L_512d
+    NUM_LAYERS: "12"
+    NUM_UNIQUE_LAYERS: "1"
+    MODEL_DIM: "512"
+    MLP_MULT: "2"
+
+  # --- Unique layers sweep (fixed 10L, dim=512) ---
+  - RUN_ID: sweep_10L_2U_512d
+    NUM_LAYERS: "10"
+    NUM_UNIQUE_LAYERS: "2"
+    MODEL_DIM: "512"
+    MLP_MULT: "2"
+
+  - RUN_ID: sweep_10L_5U_512d
+    NUM_LAYERS: "10"
+    NUM_UNIQUE_LAYERS: "5"
+    MODEL_DIM: "512"
+    MLP_MULT: "2"
+
+  # --- Width test ---
+  - RUN_ID: sweep_10L_1U_640d
+    NUM_LAYERS: "10"
+    NUM_UNIQUE_LAYERS: "1"
+    MODEL_DIM: "640"
+    MLP_MULT: "2"
+    NUM_KV_HEADS: "2"

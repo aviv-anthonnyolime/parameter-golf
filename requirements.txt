@@ -10,3 +10,5 @@ datasets<4
 tiktoken
 sentencepiece
 wandb
+pyyaml
+matplotlib

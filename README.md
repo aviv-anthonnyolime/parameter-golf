@@ -177,6 +177,169 @@ data/tokenizers →  /opt/pg-data/tokenizers (small tokenizer models)
 
 > **Note:** CC/CXX exports only last for the current shell session.
 
+### Experiment Tooling
+
+The repo includes tooling for tracking experiments, queuing overnight runs, and visualizing results. Install the extra dependencies first:
+
+```bash
+pip install pyyaml matplotlib wandb
+```
+
+#### Run Naming & Log Files
+
+Each training run automatically gets a **docker-style name** (e.g. `brave-falcon`) derived from the `RUN_ID`. Log files are named with date, time, model params, and docker name for easy sorting:
+
+```text
+logs/2026-03-20_143052_10L-1U-512d-2mlp_brave-falcon.txt
+```
+
+The same name is used for the W&B run: `brave-falcon_10L-1U-512d-2mlp`.
+
+#### Weights & Biases (W&B) Integration
+
+Enable W&B logging by setting `WANDB_ENABLED=1`. Logs all hyperparameters as config, and tracks `train_loss`, `step_avg_ms`, `lr_scale` every `TRAIN_LOG_EVERY` steps (default: 10), plus `val_loss`/`val_bpb` on every validation.
+
+```bash
+# Single run with W&B
+WANDB_ENABLED=1 \
+RUN_ID=my_experiment \
+torchrun --standalone --nproc_per_node=4 experiments/phase1_UT/train_gpt_ut.py
+```
+
+Environment variables:
+
+| Variable          | Default                              | Description                                              |
+| ----------------- | ------------------------------------ | -------------------------------------------------------- |
+| `WANDB_ENABLED`   | `0`                                  | Set to `1` to activate W&B logging                       |
+| `WANDB_ENTITY`    | `citaman`                            | W&B team/entity name                                     |
+| `WANDB_PROJECT`   | `Openai-challenge-parameter-golf`    | W&B project name                                         |
+| `TRAIN_LOG_EVERY` | `10`                                 | Log training metrics every N steps (both console and W&B)|
+
+#### Results Tracking (JSONL)
+
+After each run completes, results are automatically appended to two JSONL files:
+
+- **Per-experiment**: `experiments/phase1_UT/results.jsonl`
+- **Global**: `results/all_runs.jsonl`
+
+Each entry contains: `run_id`, `docker_name`, `params_tag`, `val_loss`, `val_bpb`, `val_bpb_int8`, `val_bpb_ttt`, `avg_ms_per_step`, `compressed_size_mb`, `peak_memory_mib`, and the full hyperparameters dict.
+
+#### Ranking & Charts
+
+View a ranked leaderboard of all runs:
+
+```bash
+# Global leaderboard (all experiments)
+python scripts/ranking.py
+
+# Per-experiment leaderboard
+python scripts/ranking.py experiments/phase1_UT/results.jsonl
+
+# Generate matplotlib charts (bar chart, loss line, bpb line, size scatter)
+python scripts/ranking.py --chart
+python scripts/ranking.py --chart --out my_charts/
+```
+
+Example output:
+
+```text
+Rank  Docker Name          Experiment    val_bpb  bpb_int8  bpb_ttt    loss  ms/step  steps  size_MB             Params
+   1  swift-eagle          phase1_UT      1.1800    1.1900   1.1700  1.4000    583.3   1200    14.50   10L-2U-512d-2mlp
+   2  calm-otter           phase1_UT      1.2000    1.2100   1.1900  1.4200   1000.0    800    15.07   12L-1U-640d-2mlp
+   3  brave-falcon         phase1_UT      1.2200    1.2300   1.2100  1.4500    548.0   1000    13.83   10L-1U-512d-2mlp
+```
+
+#### Queue Runner (Overnight Runs)
+
+Define multiple runs in a YAML file and execute them sequentially. After each run, results are committed and pushed to git automatically so you can check progress remotely.
+
+```bash
+# Preview what will run (no execution)
+python scripts/run_queue.py experiments/phase1_UT/queue.yaml --dry-run
+
+# Run the queue (commits + pushes after each run)
+python scripts/run_queue.py experiments/phase1_UT/queue.yaml
+
+# Run without pushing (commit locally only)
+python scripts/run_queue.py experiments/phase1_UT/queue.yaml --no-push
+```
+
+Git commits follow this format:
+
+```text
+[brave-falcon] - [10L-1U-512d-2mlp] - [phase1_UT] - (loss: 1.4452) (val_bpb: 1.2147)
+```
+
+**Example queue file** (`experiments/phase1_UT/queue.yaml`):
+
+```yaml
+script: experiments/phase1_UT/train_gpt_ut.py
+nproc: 4    # 4 for g5dn (4×A10G), 8 for RunPod (8×H100)
+
+defaults:
+  DATA_PATH: ./data/datasets/fineweb10B_sp1024
+  TOKENIZER_PATH: ./data/tokenizers/fineweb_1024_bpe.model
+  VOCAB_SIZE: "1024"
+  MAX_WALLCLOCK_SECONDS: "2000"
+  TRAIN_LOG_EVERY: "10"
+  WANDB_ENABLED: "1"
+
+runs:
+  - RUN_ID: baseline_10L_512d
+    NUM_LAYERS: "10"
+    NUM_UNIQUE_LAYERS: "1"
+    MODEL_DIM: "512"
+
+  - RUN_ID: test_10L_2U_512d
+    NUM_LAYERS: "10"
+    NUM_UNIQUE_LAYERS: "2"
+    MODEL_DIM: "512"
+```
+
+A longer overnight sweep is also provided in `experiments/phase1_UT/queue_overnight.yaml` (6 runs, ~3.5h on 4×A10G) covering depth, unique-layer, and width ablations.
+
+#### Promote Best Runs to RunPod
+
+After local experiments, promote the top candidates to an 8×H100 queue:
+
+```bash
+# Pick top 3 runs → generate RunPod queue
+python scripts/promote.py --top 3
+
+# From a specific results file
+python scripts/promote.py --top 5 --from experiments/phase1_UT/results.jsonl
+
+# Custom settings
+python scripts/promote.py --top 3 --nproc 8 --wallclock 600 --out runpod_queue.yaml
+```
+
+This generates a ready-to-run YAML queue file with `nproc: 8` and `MAX_WALLCLOCK_SECONDS: 600`, plus prints the `torchrun` commands for manual use.
+
+#### GPU Memory Estimation
+
+Before scaling up model dimensions, check if it fits in your GPU memory:
+
+```bash
+# Default config
+python scripts/model_size.py experiments/phase1_UT/train_gpt_ut.py
+
+# Custom config
+NUM_LAYERS=12 MODEL_DIM=640 python scripts/model_size.py experiments/phase1_UT/train_gpt_ut.py
+
+# Custom GPU budget
+NPROC=8 GPU_MEM_GB=80 python scripts/model_size.py experiments/phase1_UT/train_gpt_ut.py
+```
+
+#### Scripts Summary
+
+| Script                 | Description                                                      |
+| ---------------------- | ---------------------------------------------------------------- |
+| `scripts/ranking.py`   | Display ranked leaderboard + matplotlib charts from JSONL results|
+| `scripts/run_queue.py` | Run a YAML queue of experiments with auto git commit/push        |
+| `scripts/promote.py`   | Pick best local runs and generate RunPod 8×H100 queue            |
+| `scripts/model_size.py`| Estimate compressed model size + GPU memory for DDP training     |
+| `scripts/naming.py`    | Docker-style adjective-animal name generator (used internally)   |
+
 ## FAQ
 
 **What exactly counts toward the 16MB artifact size?**

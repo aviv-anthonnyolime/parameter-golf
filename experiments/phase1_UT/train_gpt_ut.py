@@ -7,8 +7,10 @@ Hard stop: To keep readable for newcomers, let's make sure `train_gpt.py` and `t
 from __future__ import annotations
 
 import copy
+import datetime
 import glob
 import io
+import json
 import math
 import os
 import random
@@ -26,6 +28,55 @@ import torch.distributed as dist
 import torch.nn.functional as F
 from torch import Tensor, nn
 from torch.nn.parallel import DistributedDataParallel as DDP
+
+# Optional W&B — graceful fallback if not installed
+try:
+    import wandb
+
+    _WANDB_AVAILABLE = True
+except ImportError:
+    _WANDB_AVAILABLE = False
+
+# Docker-style name generator (inline to avoid import path issues with torchrun)
+_NAME_ADJECTIVES = [
+    "agile", "bold", "brave", "bright", "calm", "clever", "cool", "cosmic",
+    "crisp", "dark", "deep", "eager", "epic", "fair", "fast", "fierce",
+    "fleet", "frosty", "gentle", "grand", "happy", "hardy", "keen", "kind",
+    "lively", "lucky", "merry", "mighty", "noble", "plucky", "proud", "quick",
+    "quiet", "rapid", "rustic", "sharp", "shiny", "silent", "sleek", "smooth",
+    "snappy", "solar", "solid", "spicy", "stark", "steady", "stoic", "strong",
+    "super", "swift", "tidy", "tough", "vivid", "warm", "wild", "wise",
+    "witty", "zany", "zen", "zippy",
+]
+_NAME_ANIMALS = [
+    "alpaca", "badger", "bear", "bison", "cobra", "condor", "crane", "crow",
+    "deer", "dingo", "eagle", "egret", "elk", "falcon", "ferret", "finch",
+    "fox", "gecko", "goose", "gorilla", "hawk", "heron", "horse", "husky",
+    "ibis", "iguana", "impala", "jackal", "jaguar", "jay", "kite", "koala",
+    "lark", "lemur", "lion", "llama", "lynx", "macaw", "mink", "moose",
+    "newt", "okapi", "orca", "osprey", "otter", "owl", "panda", "parrot",
+    "puma", "quail", "raven", "robin", "salmon", "seal", "shark", "sloth",
+    "snake", "squid", "stork", "swan", "tiger", "toucan", "trout", "viper",
+    "whale", "wolf", "wren", "yak", "zebra", "zorilla",
+]
+
+
+def _generate_docker_name(seed=None):
+    import hashlib
+    if isinstance(seed, str):
+        seed = int(hashlib.sha256(seed.encode()).hexdigest(), 16)
+    rng = random.Random(seed)
+    return f"{rng.choice(_NAME_ADJECTIVES)}-{rng.choice(_NAME_ANIMALS)}"
+
+
+def _params_tag(args):
+    return f"{args.num_layers}L-{args.num_unique_layers}U-{args.model_dim}d-{args.mlp_mult}mlp"
+
+
+def _experiment_name():
+    """Derive experiment folder name from script path (e.g. 'phase1_UT')."""
+    script_dir = Path(__file__).resolve().parent.name
+    return script_dir
 
 # -----------------------------
 # HYPERPARAMETERS
@@ -51,7 +102,12 @@ class Hyperparameters:
     # Validation cadence and batch size. Validation always uses the full fineweb_val split.
     val_batch_size = int(os.environ.get("VAL_BATCH_SIZE", 524_288))
     val_loss_every = int(os.environ.get("VAL_LOSS_EVERY", 1000))
-    train_log_every = int(os.environ.get("TRAIN_LOG_EVERY", 200))
+    train_log_every = int(os.environ.get("TRAIN_LOG_EVERY", 10))
+
+    # Weights & Biases.
+    wandb_enabled = bool(int(os.environ.get("WANDB_ENABLED", "0")))
+    wandb_entity = os.environ.get("WANDB_ENTITY", "citaman")
+    wandb_project = os.environ.get("WANDB_PROJECT", "Openai-challenge-parameter-golf")
 
     # Training length.
     iterations = int(os.environ.get("ITERATIONS", 20000))
@@ -892,7 +948,9 @@ class BatchedTTTLoRA(nn.Module):
         self.lm_head_lora = BatchedLinearLoRA(bsz, dim, vocab, rank)
         self.q_loras = nn.ModuleList()
         self.v_loras = nn.ModuleList()
-        for block in model.blocks:
+        num_steps = model.num_encoder_layers + model.num_decoder_layers
+        for i in range(num_steps):
+            block = model.blocks[i % model.num_unique_layers]
             self.q_loras.append(
                 BatchedLinearLoRA(bsz, dim, block.attn.c_q.weight.shape[0], rank)
             )
@@ -1171,11 +1229,36 @@ def main() -> None:
     enable_mem_efficient_sdp(False)
     enable_math_sdp(False)
 
+    # --- Run naming & log file ---
+    now = datetime.datetime.now()
+    date_str = now.strftime("%Y-%m-%d")
+    time_str = now.strftime("%H%M%S")
+    docker_name = _generate_docker_name(seed=args.run_id)
+    ptag = _params_tag(args)
+    experiment = _experiment_name()
+    wandb_run_name = f"{docker_name}_{ptag}"
+
     logfile = None
     if master_process:
         os.makedirs("logs", exist_ok=True)
-        logfile = f"logs/{args.run_id}.txt"
-        print(logfile)
+        log_fname = f"{date_str}_{time_str}_{ptag}_{docker_name}.txt"
+        logfile = f"logs/{log_fname}"
+        print(f"logfile: {logfile}")
+        print(f"run_name: {wandb_run_name}")
+
+    # --- W&B init (rank 0 only) ---
+    wandb_run = None
+    if master_process and args.wandb_enabled and _WANDB_AVAILABLE:
+        hp_dict = {k: v for k, v in vars(args.__class__).items() if not k.startswith("_")}
+        wandb_run = wandb.init(
+            entity=args.wandb_entity,
+            project=args.wandb_project,
+            name=wandb_run_name,
+            config=hp_dict,
+            tags=[experiment, ptag, docker_name],
+        )
+    elif master_process and args.wandb_enabled and not _WANDB_AVAILABLE:
+        print("WARNING: WANDB_ENABLED=1 but wandb not installed. Skipping.")
 
     def log0(msg: str, console: bool = True) -> None:
         if not master_process:
@@ -1462,6 +1545,8 @@ def main() -> None:
                 f"step:{step}/{args.iterations} val_loss:{val_loss:.4f} val_bpb:{val_bpb:.4f} "
                 f"train_time:{training_time_ms:.0f}ms step_avg:{training_time_ms / max(step, 1):.2f}ms"
             )
+            if wandb_run is not None:
+                wandb_run.log({"val_loss": val_loss, "val_bpb": val_bpb}, step=step)
             torch.cuda.synchronize()
             t0 = time.perf_counter()
 
@@ -1518,10 +1603,14 @@ def main() -> None:
             or stop_after_step is not None
         )
         if should_log_train:
+            tl = train_loss.item()
+            step_avg_ms = approx_training_time_ms / step
             log0(
-                f"step:{step}/{args.iterations} train_loss:{train_loss.item():.4f} "
-                f"train_time:{approx_training_time_ms:.0f}ms step_avg:{approx_training_time_ms / step:.2f}ms"
+                f"step:{step}/{args.iterations} train_loss:{tl:.4f} "
+                f"train_time:{approx_training_time_ms:.0f}ms step_avg:{step_avg_ms:.2f}ms"
             )
+            if wandb_run is not None:
+                wandb_run.log({"train_loss": tl, "step_avg_ms": step_avg_ms, "lr_scale": scale}, step=step)
 
         # Needed to sync whether we've reached the wallclock cap.
         reached_cap = (
@@ -1623,6 +1712,61 @@ def main() -> None:
         f"final_int8_ttt_lora val_loss:{ttt_val_loss:.4f} val_bpb:{ttt_val_bpb:.4f} "
         f"eval_time:{1000.0 * (time.perf_counter() - t_ttt):.0f}ms"
     )
+
+    # --- Save JSONL results (rank 0 only) ---
+    if master_process:
+        final_step_avg_ms = training_time_ms / max(step, 1)
+        result_entry = {
+            "run_id": args.run_id,
+            "docker_name": docker_name,
+            "experiment": experiment,
+            "params_tag": ptag,
+            "timestamp": now.isoformat(),
+            "total_steps": step,
+            "total_time_s": round(training_time_ms / 1000.0, 1),
+            "avg_ms_per_step": round(final_step_avg_ms, 2),
+            "val_loss": round(float(val_loss), 6),
+            "val_bpb": round(float(val_bpb), 6),
+            "val_loss_int8": round(float(q_val_loss), 6),
+            "val_bpb_int8": round(float(q_val_bpb), 6),
+            "val_loss_ttt": round(float(ttt_val_loss), 6),
+            "val_bpb_ttt": round(float(ttt_val_bpb), 6),
+            "compressed_size_bytes": quant_file_bytes,
+            "compressed_size_mb": round(quant_file_bytes / 1024**2, 2),
+            "peak_memory_mib": torch.cuda.max_memory_allocated() // 1024 // 1024,
+            "world_size": world_size,
+            "logfile": logfile,
+            "hyperparams": {
+                k: v for k, v in vars(args.__class__).items() if not k.startswith("_")
+            },
+        }
+        result_line = json.dumps(result_entry)
+
+        # Per-experiment results file
+        exp_results = Path(__file__).resolve().parent / "results.jsonl"
+        with open(exp_results, "a", encoding="utf-8") as f:
+            f.write(result_line + "\n")
+        log0(f"results_saved: {exp_results}")
+
+        # Global results file
+        global_results = Path(__file__).resolve().parent.parent.parent / "results" / "all_runs.jsonl"
+        global_results.parent.mkdir(parents=True, exist_ok=True)
+        with open(global_results, "a", encoding="utf-8") as f:
+            f.write(result_line + "\n")
+        log0(f"results_saved: {global_results}")
+
+    # --- W&B summary + finish ---
+    if wandb_run is not None:
+        wandb_run.summary.update({
+            "final_val_loss": float(val_loss),
+            "final_val_bpb": float(val_bpb),
+            "final_val_bpb_int8": float(q_val_bpb),
+            "final_val_bpb_ttt": float(ttt_val_bpb),
+            "total_steps": step,
+            "avg_ms_per_step": round(training_time_ms / max(step, 1), 2),
+            "compressed_size_mb": round(quant_file_bytes / 1024**2, 2),
+        })
+        wandb_run.finish()
 
     if distributed:
         dist.destroy_process_group()
