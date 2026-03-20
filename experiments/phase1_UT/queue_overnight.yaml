@@ -11,7 +11,7 @@ defaults:
   DATA_PATH: ./data/datasets/fineweb10B_sp1024
   TOKENIZER_PATH: ./data/tokenizers/fineweb_1024_bpe.model
   VOCAB_SIZE: "1024"
-  MAX_WALLCLOCK_SECONDS: "2000"
+  MAX_WALLCLOCK_SECONDS: "3600"
   TRAIN_LOG_EVERY: "10"
   WANDB_ENABLED: "1"
   WANDB_PROJECT: Openai-challenge-parameter-golf

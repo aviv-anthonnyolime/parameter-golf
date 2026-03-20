@@ -156,31 +156,45 @@ def main():
         print(f"Queue file not found: {queue_path}")
         sys.exit(1)
 
-    with open(queue_path, "r", encoding="utf-8") as f:
-        config = yaml.safe_load(f)
+    def load_queue():
+        with open(queue_path, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
 
+    config = load_queue()
     script = config.get("script", "experiments/phase1_UT/train_gpt_ut.py")
-    nproc = config.get("nproc", 4)
-    defaults = config.get("defaults", {})
-    runs = config.get("runs", [])
+    total_runs = len(config.get("runs", []))
 
-    if not runs:
+    if total_runs == 0:
         print("No runs defined in queue file.")
         sys.exit(1)
 
-    print(f"Queue: {len(runs)} runs")
+    print(f"Queue: {total_runs} runs (re-reads YAML before each run)")
     print(f"Script: {script}")
-    print(f"GPUs: {nproc}")
+    print(f"GPUs: {config.get('nproc', 4)}")
 
     # Resolve experiment dir from script path
     experiment_dir = Path(script).resolve().parent
 
-    for i, run_overrides in enumerate(runs, 1):
-        # Merge defaults + per-run overrides
+    i = 0
+    completed = 0
+    while True:
+        # Re-read YAML before each run to pick up live edits
+        config = load_queue()
+        script = config.get("script", "experiments/phase1_UT/train_gpt_ut.py")
+        nproc = config.get("nproc", 4)
+        defaults = config.get("defaults", {})
+        runs = config.get("runs", [])
+
+        if i >= len(runs):
+            break
+
+        run_overrides = runs[i]
         env_vars = {**defaults}
         env_vars.update(run_overrides)
 
-        run_id = run_single(script, nproc, env_vars, i, len(runs), args.dry_run)
+        print(f"\n  [YAML reloaded — {len(runs)} runs total, starting run {i+1}]")
+
+        run_id = run_single(script, nproc, env_vars, i + 1, len(runs), args.dry_run)
 
         if run_id is not None and not args.dry_run:
             result = parse_latest_result(experiment_dir)
@@ -189,8 +203,11 @@ def main():
             else:
                 print("  WARNING: Could not find result entry for git commit")
 
+        i += 1
+        completed += 1
+
     print(f"\n{'='*60}")
-    print(f"  Queue complete! {len(runs)} runs finished.")
+    print(f"  Queue complete! {completed} runs finished.")
     print(f"{'='*60}\n")
 
     # Show final ranking
