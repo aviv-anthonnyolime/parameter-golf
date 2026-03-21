@@ -1,0 +1,79 @@
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:80
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:2368008
+world_size:4 grad_accum_steps:1
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+tie_embeddings:True embed_lr:0.05 head_lr:0.0 matrix_lr:0.04 scalar_lr:0.04
+train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:3600.000
+seed:1337
+warmup_step:1/20
+warmup_step:2/20
+warmup_step:3/20
+warmup_step:4/20
+warmup_step:5/20
+warmup_step:6/20
+warmup_step:7/20
+warmup_step:8/20
+warmup_step:9/20
+warmup_step:10/20
+warmup_step:11/20
+warmup_step:12/20
+warmup_step:13/20
+warmup_step:14/20
+warmup_step:15/20
+warmup_step:16/20
+warmup_step:17/20
+warmup_step:18/20
+warmup_step:19/20
+warmup_step:20/20
+step:0/20000 val_loss:6.9404 val_bpb:4.1105 train_time:0ms step_avg:0.02ms
+step:1/20000 train_loss:6.9416 train_time:19ms step_avg:19.50ms
+step:2/20000 train_loss:13.6843 train_time:508ms step_avg:254.23ms
+step:3/20000 train_loss:16.4819 train_time:999ms step_avg:332.99ms
+step:4/20000 train_loss:14.6885 train_time:1490ms step_avg:372.44ms
+step:5/20000 train_loss:12.0811 train_time:1980ms step_avg:396.05ms
+step:6/20000 train_loss:10.2902 train_time:2471ms step_avg:411.91ms
+step:7/20000 train_loss:8.8557 train_time:2962ms step_avg:423.13ms
+step:8/20000 train_loss:8.0891 train_time:3453ms step_avg:431.64ms
+step:9/20000 train_loss:7.7174 train_time:3944ms step_avg:438.20ms
+step:10/20000 train_loss:7.3818 train_time:4434ms step_avg:443.44ms
+step:20/20000 train_loss:5.9226 train_time:9329ms step_avg:466.46ms
+step:30/20000 train_loss:5.4111 train_time:14224ms step_avg:474.12ms
+step:40/20000 train_loss:5.0696 train_time:19118ms step_avg:477.96ms
+step:50/20000 train_loss:4.8551 train_time:24013ms step_avg:480.27ms
+step:60/20000 train_loss:4.6107 train_time:28906ms step_avg:481.77ms
+step:70/20000 train_loss:4.3822 train_time:33800ms step_avg:482.85ms
+step:80/20000 train_loss:4.3540 train_time:38694ms step_avg:483.67ms
+step:90/20000 train_loss:4.1438 train_time:43587ms step_avg:484.30ms
+step:100/20000 train_loss:3.9937 train_time:48480ms step_avg:484.80ms
+step:110/20000 train_loss:3.9051 train_time:53374ms step_avg:485.22ms
+step:120/20000 train_loss:3.8308 train_time:58267ms step_avg:485.56ms
+step:130/20000 train_loss:3.7580 train_time:63160ms step_avg:485.84ms
+step:140/20000 train_loss:3.6396 train_time:68053ms step_avg:486.10ms
+step:150/20000 train_loss:3.6480 train_time:72947ms step_avg:486.32ms
+step:160/20000 train_loss:3.5702 train_time:77841ms step_avg:486.51ms
+step:170/20000 train_loss:3.6015 train_time:82735ms step_avg:486.68ms
+step:180/20000 train_loss:3.5296 train_time:87629ms step_avg:486.83ms
+step:190/20000 train_loss:3.5465 train_time:92523ms step_avg:486.96ms
+step:200/20000 train_loss:3.4189 train_time:97460ms step_avg:487.30ms
+step:210/20000 train_loss:3.4244 train_time:102353ms step_avg:487.40ms
+step:220/20000 train_loss:3.4058 train_time:107246ms step_avg:487.48ms
+step:230/20000 train_loss:3.4270 train_time:112140ms step_avg:487.57ms
+step:240/20000 train_loss:3.4195 train_time:117033ms step_avg:487.64ms
+step:250/20000 train_loss:3.3103 train_time:121927ms step_avg:487.71ms
+step:260/20000 train_loss:3.2510 train_time:126820ms step_avg:487.77ms
+step:270/20000 train_loss:3.2454 train_time:131715ms step_avg:487.83ms
+Traceback (most recent call last):
+  File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase1_UT/train_gpt_ut.py", line 1793, in <module>
+    main()
+  File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase1_UT/train_gpt_ut.py", line 1633, in main
+    reached_cap_tensor = torch.tensor(int(reached_cap), device=device)
+KeyboardInterrupt
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase1_UT/train_gpt_ut.py", line 1793, in <module>
+[rank0]:     main()
+[rank0]:   File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase1_UT/train_gpt_ut.py", line 1633, in main
+[rank0]:     reached_cap_tensor = torch.tensor(int(reached_cap), device=device)
+[rank0]: KeyboardInterrupt

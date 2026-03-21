@@ -3,6 +3,10 @@
 #
 # Runs 6 experiments sequentially, commits + pushes results after each.
 # Total estimated time on g5dn.12xlarge (4×A10G): ~3.5 hours
+#
+# GRAD_ACCUM_STEPS=1: on 4-GPU machines the default formula gives grad_accum=2
+# (step time ~1200ms). Override to 1 for ~600ms/step; global batch stays the
+# same (524288 tokens) because each GPU handles a larger single micro-batch.
 
 script: experiments/phase1_UT/train_gpt_ut.py
 nproc: 4
@@ -15,44 +19,68 @@ defaults:
   TRAIN_LOG_EVERY: "10"
   WANDB_ENABLED: "1"
   WANDB_PROJECT: Openai-challenge-parameter-golf
+  GRAD_ACCUM_STEPS: "1"
 
 runs:
-  # --- Depth sweep (fixed dim=512, unique=1) ---
-  - RUN_ID: sweep_8L_512d
-    NUM_LAYERS: "8"
+
+  # --- Baseline (20L, 10U, dim=512) ---
+  # - RUN_ID: sweep_20L_10U_512d
+  #   NUM_LAYERS: "20"
+  #   NUM_UNIQUE_LAYERS: "10"
+  #   MODEL_DIM: "512"
+  #   MLP_MULT: "2"
+
+  # --- Unique layers sweep (fixed 20L, dim=512) ---
+  # - RUN_ID: sweep_20L_5U_512d
+  #   NUM_LAYERS: "20"
+  #   NUM_UNIQUE_LAYERS: "5"
+  #   MODEL_DIM: "512"
+  #   MLP_MULT: "2"
+
+  # - RUN_ID: sweep_12L_6U_512d_2MLP
+  #   NUM_LAYERS: "12"
+  #   NUM_UNIQUE_LAYERS: "6"
+  #   MODEL_DIM: "512"
+  #   MLP_MULT: "2"
+    
+  # # --- Baseline (20L, 10U, dim=512) ---
+  # - RUN_ID: sweep_12L_5U_512d_2MLP
+  #   NUM_LAYERS: "12"
+  #   NUM_UNIQUE_LAYERS: "3"
+  #   MODEL_DIM: "640"
+  #   MLP_MULT: "2"
+    
+  # - RUN_ID: sweep_14L_2U_512d_2MLP
+  #   NUM_LAYERS: "14"
+  #   NUM_UNIQUE_LAYERS: "2"
+  #   MODEL_DIM: "512"
+  #   MLP_MULT: "2"
+
+  # - RUN_ID: sweep_16L_4U_512d_2MLP
+  #   NUM_LAYERS: "14"
+  #   NUM_UNIQUE_LAYERS: "2"
+  #   MODEL_DIM: "512"
+  #   MLP_MULT: "2"
+
+  # - RUN_ID: sweep_10L_2U_768d_2MLP
+  #   NUM_LAYERS: "10"
+  #   NUM_UNIQUE_LAYERS: "2"
+  #   MODEL_DIM: "768"
+  #   MLP_MULT: "2"
+
+  # - RUN_ID: sweep_12L_3U_512d_2MLP
+  #  NUM_LAYERS: "12"
+  #  NUM_UNIQUE_LAYERS: "3"
+  #  MODEL_DIM: "512"
+  #  MLP_MULT: "2"
+    
+  # Try wider model
+  - RUN_ID: test_10L_5U_640d
+    NUM_LAYERS: "9"
     NUM_UNIQUE_LAYERS: "1"
     MODEL_DIM: "512"
     MLP_MULT: "2"
+  
 
-  - RUN_ID: sweep_10L_512d
-    NUM_LAYERS: "10"
-    NUM_UNIQUE_LAYERS: "1"
-    MODEL_DIM: "512"
-    MLP_MULT: "2"
 
-  - RUN_ID: sweep_12L_512d
-    NUM_LAYERS: "12"
-    NUM_UNIQUE_LAYERS: "1"
-    MODEL_DIM: "512"
-    MLP_MULT: "2"
 
-  # --- Unique layers sweep (fixed 10L, dim=512) ---
-  - RUN_ID: sweep_10L_2U_512d
-    NUM_LAYERS: "10"
-    NUM_UNIQUE_LAYERS: "2"
-    MODEL_DIM: "512"
-    MLP_MULT: "2"
-
-  - RUN_ID: sweep_10L_5U_512d
-    NUM_LAYERS: "10"
-    NUM_UNIQUE_LAYERS: "5"
-    MODEL_DIM: "512"
-    MLP_MULT: "2"
-
-  # --- Width test ---
-  - RUN_ID: sweep_10L_1U_640d
-    NUM_LAYERS: "10"
-    NUM_UNIQUE_LAYERS: "1"
-    MODEL_DIM: "640"
-    MLP_MULT: "2"
-    NUM_KV_HEADS: "2"

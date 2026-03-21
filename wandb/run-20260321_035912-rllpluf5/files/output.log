@@ -1,0 +1,165 @@
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:80
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:4209168
+world_size:4 grad_accum_steps:1
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+tie_embeddings:True embed_lr:0.05 head_lr:0.0 matrix_lr:0.04 scalar_lr:0.04
+train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:3600.000
+seed:1337
+Traceback (most recent call last):
+  File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase1_UT/train_gpt_ut.py", line 1793, in <module>
+    main()
+  File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase1_UT/train_gpt_ut.py", line 1503, in main
+    warmup_loss = model(x, y)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/parallel/distributed.py", line 1643, in forward
+    else self._run_ddp_forward(*inputs, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/parallel/distributed.py", line 1459, in _run_ddp_forward
+    return self.module(*inputs, **kwargs)  # type: ignore[index]
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 574, in _fn
+    return fn(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase1_UT/train_gpt_ut.py", line 873, in forward
+    def forward(self, input_ids: Tensor, target_ids: Tensor, lora=None) -> Tensor:
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 745, in _fn
+    return fn(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/fx/graph_module.py", line 822, in call_wrapped
+    return self._wrapped_call(self, *args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/fx/graph_module.py", line 400, in __call__
+    raise e
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/fx/graph_module.py", line 387, in __call__
+    return super(self.cls, obj).__call__(*args, **kwargs)  # type: ignore[misc]
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "<eval_with_key>.47", line 51, in forward
+    submod_2 = self.compiled_submod_2(l_self_modules_blocks_modules_0_modules_mlp_modules_proj_parameters_weight_, getitem_11, getitem_12, getitem_13, l_self_modules_depth_embed_parameters_weight_, l_self_parameters_skip_weights_, l_self_modules_blocks_modules_1_parameters_resid_mix_, getitem_5, l_self_modules_blocks_modules_1_modules_attn_modules_c_q_parameters_weight_, l_self_modules_blocks_modules_1_modules_attn_modules_c_k_parameters_weight_, l_self_modules_blocks_modules_1_modules_attn_modules_c_v_parameters_weight_, getitem_2, getitem_3, l_self_modules_blocks_modules_1_modules_attn_parameters_q_gain_, l_self_modules_blocks_modules_1_modules_attn_modules_proj_parameters_weight_, l_self_modules_blocks_modules_1_parameters_attn_scale_, l_self_modules_blocks_modules_1_parameters_mlp_scale_, l_self_modules_blocks_modules_1_modules_mlp_modules_fc_parameters_weight_, l_self_modules_blocks_modules_1_modules_mlp_modules_proj_parameters_weight_, getitem_14, l_self_modules_blocks_modules_0_parameters_resid_mix_, l_self_modules_blocks_modules_0_modules_attn_modules_c_q_parameters_weight_, l_self_modules_blocks_modules_0_modules_attn_modules_c_k_parameters_weight_, l_self_modules_blocks_modules_0_modules_attn_modules_c_v_parameters_weight_, getitem_6, getitem_7, l_self_modules_blocks_modules_0_modules_attn_parameters_q_gain_, l_self_modules_blocks_modules_0_modules_attn_modules_proj_parameters_weight_, l_self_modules_blocks_modules_0_parameters_attn_scale_, l_self_modules_blocks_modules_0_parameters_mlp_scale_, l_self_modules_blocks_modules_0_modules_mlp_modules_fc_parameters_weight_, getitem_15, getitem_16);  getitem_11 = getitem_12 = getitem_13 = getitem_14 = getitem_15 = getitem_16 = None
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/backends/distributed.py", line 153, in forward
+    x = self.submod(*args)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 745, in _fn
+    return fn(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/aot_autograd.py", line 1184, in forward
+    return compiled_fn(full_args)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 310, in runtime_wrapper
+    all_outs = call_func_at_runtime_with_args(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/utils.py", line 126, in call_func_at_runtime_with_args
+    out = normalize_as_list(f(args))
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/utils.py", line 100, in g
+    return f(*args)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/autograd/function.py", line 575, in apply
+    return super().apply(*args, **kwargs)  # type: ignore[misc]
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 1585, in forward
+    fw_outs = call_func_at_runtime_with_args(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/utils.py", line 126, in call_func_at_runtime_with_args
+    out = normalize_as_list(f(args))
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 581, in wrapper
+    return compiled_fn(runtime_args)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 490, in wrapper
+    return compiled_fn(runtime_args)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 672, in inner_fn
+    outs = compiled_fn(args)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/output_code.py", line 466, in __call__
+    return self.current_callable(inputs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/utils.py", line 2128, in run
+    return model(new_inputs)
+  File "/tmp/torchinductor_ec2-user/l5/cl5qw6owowmfdxtnrj4yr7f2kexf36qmvxauttqo4ejf36rdhoao.py", line 1978, in call
+    buf112 = empty_strided_cuda((131072, 512), (512, 1), torch.bfloat16)
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 128.00 MiB. GPU 0 has a total capacity of 22.07 GiB of which 75.50 MiB is free. Process 1846 has 248.00 MiB memory in use. Process 1847 has 248.00 MiB memory in use. Process 1848 has 248.00 MiB memory in use. Including non-PyTorch memory, this process has 21.25 GiB memory in use. Of the allocated memory 20.80 GiB is allocated by PyTorch, and 14.64 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase1_UT/train_gpt_ut.py", line 1793, in <module>
+[rank0]:     main()
+[rank0]:   File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase1_UT/train_gpt_ut.py", line 1503, in main
+[rank0]:     warmup_loss = model(x, y)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/parallel/distributed.py", line 1643, in forward
+[rank0]:     else self._run_ddp_forward(*inputs, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/parallel/distributed.py", line 1459, in _run_ddp_forward
+[rank0]:     return self.module(*inputs, **kwargs)  # type: ignore[index]
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 574, in _fn
+[rank0]:     return fn(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase1_UT/train_gpt_ut.py", line 873, in forward
+[rank0]:     def forward(self, input_ids: Tensor, target_ids: Tensor, lora=None) -> Tensor:
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 745, in _fn
+[rank0]:     return fn(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/fx/graph_module.py", line 822, in call_wrapped
+[rank0]:     return self._wrapped_call(self, *args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/fx/graph_module.py", line 400, in __call__
+[rank0]:     raise e
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/fx/graph_module.py", line 387, in __call__
+[rank0]:     return super(self.cls, obj).__call__(*args, **kwargs)  # type: ignore[misc]
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "<eval_with_key>.47", line 51, in forward
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/backends/distributed.py", line 153, in forward
+[rank0]:     x = self.submod(*args)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 745, in _fn
+[rank0]:     return fn(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/aot_autograd.py", line 1184, in forward
+[rank0]:     return compiled_fn(full_args)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 310, in runtime_wrapper
+[rank0]:     all_outs = call_func_at_runtime_with_args(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/utils.py", line 126, in call_func_at_runtime_with_args
+[rank0]:     out = normalize_as_list(f(args))
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/utils.py", line 100, in g
+[rank0]:     return f(*args)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/autograd/function.py", line 575, in apply
+[rank0]:     return super().apply(*args, **kwargs)  # type: ignore[misc]
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 1585, in forward
+[rank0]:     fw_outs = call_func_at_runtime_with_args(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/utils.py", line 126, in call_func_at_runtime_with_args
+[rank0]:     out = normalize_as_list(f(args))
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 581, in wrapper
+[rank0]:     return compiled_fn(runtime_args)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 490, in wrapper
+[rank0]:     return compiled_fn(runtime_args)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 672, in inner_fn
+[rank0]:     outs = compiled_fn(args)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/output_code.py", line 466, in __call__
+[rank0]:     return self.current_callable(inputs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/utils.py", line 2128, in run
+[rank0]:     return model(new_inputs)
+[rank0]:   File "/tmp/torchinductor_ec2-user/l5/cl5qw6owowmfdxtnrj4yr7f2kexf36qmvxauttqo4ejf36rdhoao.py", line 1978, in call
+[rank0]:     buf112 = empty_strided_cuda((131072, 512), (512, 1), torch.bfloat16)
+[rank0]: torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 128.00 MiB. GPU 0 has a total capacity of 22.07 GiB of which 75.50 MiB is free. Process 1846 has 248.00 MiB memory in use. Process 1847 has 248.00 MiB memory in use. Process 1848 has 248.00 MiB memory in use. Including non-PyTorch memory, this process has 21.25 GiB memory in use. Of the allocated memory 20.80 GiB is allocated by PyTorch, and 14.64 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

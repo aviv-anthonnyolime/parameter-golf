@@ -17,17 +17,24 @@ defaults:
 
 runs:
   # Baseline: 10L-1U-512d
-  - RUN_ID: baseline_10L_512d
-    NUM_LAYERS: "10"
-    NUM_UNIQUE_LAYERS: "1"
-    MODEL_DIM: "512"
-    MLP_MULT: "2"
+  # - RUN_ID: baseline_10L_512d
+  #   NUM_LAYERS: "10"
+  #   NUM_UNIQUE_LAYERS: "1"
+  #   MODEL_DIM: "512"
+  #   MLP_MULT: "2"
 
   # Try half 
-  - RUN_ID: test_10L_5U_512d
+  # - RUN_ID: test_10L_5U_512d
+  #   NUM_LAYERS: "10"
+  #   NUM_UNIQUE_LAYERS: "5"
+  #   MODEL_DIM: "512"
+  #   MLP_MULT: "2"
+  
+  # Try wider model
+  - RUN_ID: test_10L_5U_640d
     NUM_LAYERS: "10"
     NUM_UNIQUE_LAYERS: "5"
-    MODEL_DIM: "512"
+    MODEL_DIM: "640"
     MLP_MULT: "2"
 
   # Try 3 with wider
@@ -44,10 +51,5 @@ runs:
     MODEL_DIM: "512"
     MLP_MULT: "2"
 
-  # Try wider model
-  - RUN_ID: test_10L_1U_640d
-    NUM_LAYERS: "10"
-    NUM_UNIQUE_LAYERS: "1"
-    MODEL_DIM: "640"
-    MLP_MULT: "2"
+
 
