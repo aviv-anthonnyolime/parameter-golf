@@ -77,12 +77,14 @@ static_bytes  = model_bf16 + grad_fp32 + muon_states + adam_states + ddp_buckets
 # Traced through Block.forward → Attention (SDPA flash) + MLP (ReLU²):
 #
 # Attention saved tensors (BF16, 2 bytes each):
-#   block input x (residual)       : B × S × D
-#   attn_norm input                : B × S × D
-#   normalized n (shared by QKV)   : B × S × D
-#   Q pre-rms_norm                 : B × S × D
-#   K pre-rms_norm                 : B × S × kv_dim
-#   Q post-rope+gain (SDPA input)  : B × S × D
+#   block input x (residual/norm)  : B × S × D
+#   normalized n (shared QKV in)   : B × S × D
+#   Q (c_q output / rms_norm in)   : B × S × D
+#   Q post-rms_norm (rotary in)    : B × S × D
+#   Q post-rope (gain mul in)      : B × S × D
+#   Q post-gain (SDPA input)       : B × S × D
+#   K (c_k output / rms_norm in)   : B × S × kv_dim
+#   K post-rms_norm (rotary in)    : B × S × kv_dim
 #   K post-rope (SDPA input)       : B × S × kv_dim
 #   V (SDPA input)                 : B × S × kv_dim
 #   SDPA output                    : B × S × D
@@ -95,9 +97,12 @@ static_bytes  = model_bf16 + grad_fp32 + muon_states + adam_states + ddp_buckets
 #   relu output (saved by square)  : B × S × hidden
 #   squared (proj input)           : B × S × hidden
 #
+# Note: grad_accum_steps splits the micro-batch, so activations
+# are for (TRAIN_BATCH_TOKENS / world_size / grad_accum_steps) tokens.
+#
 # Totals per layer:
-#   D-sized tensors  : ~9  × B × S × D × 2
-#   KV-sized tensors : ~3  × B × S × kv_dim × 2
+#   D-sized tensors  : ~10 × B × S × D × 2
+#   KV-sized tensors : ~4  × B × S × kv_dim × 2
 #   hidden-sized     : ~2  × B × S × hidden × 2  (+ small relu mask)
 
 batch_tokens  = getattr(args, "train_batch_tokens", 524_288)
@@ -110,14 +115,20 @@ mlp_mult      = getattr(args, "mlp_mult", gpt_kwargs.get("mlp_mult", 2))
 n_gpus        = int(os.environ.get("NPROC", 4))
 gpu_budget_gb = float(os.environ.get("GPU_MEM_GB", 24.0))
 
+grad_accum_override = int(os.environ.get("GRAD_ACCUM_STEPS", "0"))
+if grad_accum_override > 0:
+    grad_accum_steps = grad_accum_override
+else:
+    grad_accum_steps = max(8 // max(n_gpus, 1), 1)
+
 kv_dim = model_dim * num_kv_heads // num_heads
 hidden = model_dim * mlp_mult
-n_tokens_per_gpu = batch_tokens // max(n_gpus, 1)
+n_tokens_per_gpu = batch_tokens // (max(n_gpus, 1) * grad_accum_steps)
 micro_batch = n_tokens_per_gpu // seq_len
 
 # Per-layer activation bytes (BF16 = 2 bytes per element)
-d_tensors   = 9 * n_tokens_per_gpu * model_dim * 2
-kv_tensors  = 3 * n_tokens_per_gpu * kv_dim * 2
+d_tensors   = 10 * n_tokens_per_gpu * model_dim * 2
+kv_tensors  = 4 * n_tokens_per_gpu * kv_dim * 2
 mlp_tensors = 2 * n_tokens_per_gpu * hidden * 2
 relu_mask   = n_tokens_per_gpu * hidden // 8        # 1-bit mask
 act_per_layer = d_tensors + kv_tensors + mlp_tensors + relu_mask
@@ -136,8 +147,8 @@ if not fits_ddp:
     # binary search for max batch_tokens that fits
     max_batch = batch_tokens
     for candidate in [batch_tokens // 2, batch_tokens // 4, batch_tokens // 8]:
-        tpg = candidate // max(n_gpus, 1)
-        cand_act = (9*tpg*model_dim*2 + 3*tpg*kv_dim*2 + 2*tpg*hidden*2 + tpg*hidden//8) * num_layers
+        tpg = candidate // (max(n_gpus, 1) * grad_accum_steps)
+        cand_act = (10*tpg*model_dim*2 + 4*tpg*kv_dim*2 + 2*tpg*hidden*2 + tpg*hidden//8) * num_layers
         if (static_bytes + cand_act + cuda_overhead) / GB <= gpu_budget_gb:
             max_batch = candidate
             break
@@ -168,10 +179,10 @@ print(f"  │  Muon states          {muon_states/GB:.2f} GB")
 print(f"  │  Adam states          {adam_states/GB:.2f} GB")
 print(f"  │  DDP buckets          {ddp_buckets/GB:.2f} GB")
 print(f"  │  subtotal             {static_bytes/GB:.2f} GB")
-print(f"  ├ activations (TRAIN_BATCH_TOKENS={batch_tokens}, {micro_batch}seq×{seq_len}len)")
+print(f"  ├ activations (TRAIN_BATCH_TOKENS={batch_tokens}, grad_accum={grad_accum_steps}, {micro_batch}seq×{seq_len}len/gpu)")
 print(f"  │  per layer            {act_per_layer/GB:.3f} GB × {num_layers} layers")
-print(f"  │    D-sized  (9×B×S×D)          {d_tensors/GB:.3f} GB")
-print(f"  │    KV-sized (3×B×S×kv)         {kv_tensors/GB:.3f} GB")
+print(f"  │    D-sized  (10×B×S×D)         {d_tensors/GB:.3f} GB")
+print(f"  │    KV-sized (4×B×S×kv)         {kv_tensors/GB:.3f} GB")
 print(f"  │    MLP-sized(2×B×S×{hidden})    {mlp_tensors/GB:.3f} GB")
 print(f"  │  subtotal             {act_bytes/GB:.2f} GB")
 print(f"  ├ CUDA overhead         {cuda_overhead/GB:.2f} GB")
@@ -181,8 +192,8 @@ if fits_ddp:
 else:
     print(f"  ✗ OOM on {n_gpus}×{gpu_budget_gb:.0f}GB  (over by {(total_bytes/GB - gpu_budget_gb):.2f} GB)")
     if max_batch > 0:
-        tpg = max_batch // max(n_gpus, 1)
-        cand_act = (9*tpg*model_dim*2 + 3*tpg*kv_dim*2 + 2*tpg*hidden*2 + tpg*hidden//8) * num_layers
+        tpg = max_batch // (max(n_gpus, 1) * grad_accum_steps)
+        cand_act = (10*tpg*model_dim*2 + 4*tpg*kv_dim*2 + 2*tpg*hidden*2 + tpg*hidden//8) * num_layers
         cand_total = (static_bytes + cand_act + cuda_overhead) / GB
         print(f"  → try TRAIN_BATCH_TOKENS={max_batch} ({tpg//seq_len}seq/gpu) → ~{cand_total:.2f} GB")
     else:

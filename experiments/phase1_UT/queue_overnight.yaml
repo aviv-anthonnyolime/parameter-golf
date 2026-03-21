@@ -22,42 +22,26 @@ defaults:
   GRAD_ACCUM_STEPS: "1"
 
 runs:
-  # --- Depth sweep (fixed dim=512, unique=1) ---
-  - RUN_ID: sweep_8L_512d
-    NUM_LAYERS: "8"
-    NUM_UNIQUE_LAYERS: "1"
+
+  # --- Baseline (20L, 10U, dim=512) ---
+  - RUN_ID: sweep_20L_10U_512d
+    NUM_LAYERS: "20"
+    NUM_UNIQUE_LAYERS: "10"
     MODEL_DIM: "512"
     MLP_MULT: "2"
 
-  - RUN_ID: sweep_10L_512d
-    NUM_LAYERS: "10"
-    NUM_UNIQUE_LAYERS: "1"
-    MODEL_DIM: "512"
-    MLP_MULT: "2"
-
-  - RUN_ID: sweep_12L_512d
-    NUM_LAYERS: "12"
-    NUM_UNIQUE_LAYERS: "1"
-    MODEL_DIM: "512"
-    MLP_MULT: "2"
-
-  # --- Unique layers sweep (fixed 10L, dim=512) ---
-  - RUN_ID: sweep_10L_2U_512d
-    NUM_LAYERS: "10"
-    NUM_UNIQUE_LAYERS: "2"
+  # --- Unique layers sweep (fixed 20L, dim=512) ---
+  - RUN_ID: sweep_20L_5U_512d
+    NUM_LAYERS: "20"
+    NUM_UNIQUE_LAYERS: "5"
     MODEL_DIM: "512"
     MLP_MULT: "2"
 
   - RUN_ID: sweep_10L_5U_512d
     NUM_LAYERS: "10"
     NUM_UNIQUE_LAYERS: "5"
-    MODEL_DIM: "512"
+    MODEL_DIM: "784"
     MLP_MULT: "2"
 
-  # --- Width test ---
-  - RUN_ID: sweep_10L_1U_640d
-    NUM_LAYERS: "10"
-    NUM_UNIQUE_LAYERS: "1"
-    MODEL_DIM: "640"
-    MLP_MULT: "2"
-    NUM_KV_HEADS: "2"
+
+
