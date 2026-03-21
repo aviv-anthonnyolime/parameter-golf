@@ -1,0 +1,24 @@
+# Baseline reference run — fixed name "baseline" for easy comparison
+# Usage: python scripts/run_queue.py experiments/baseline/queue.yaml
+#        python scripts/run_queue.py experiments/baseline/queue.yaml --dry-run
+
+script: experiments/phase1_UT/train_gpt_ut.py
+nproc: 4    # 4 for g5dn (4×A10G), 8 for RunPod (8×H100)
+
+defaults:
+  DATA_PATH: ./data/datasets/fineweb10B_sp1024
+  TOKENIZER_PATH: ./data/tokenizers/fineweb_1024_bpe.model
+  VOCAB_SIZE: "1024"
+  MAX_WALLCLOCK_SECONDS: "2000"
+  TRAIN_LOG_EVERY: "10"
+  WANDB_ENABLED: "1"
+  WANDB_PROJECT: Openai-challenge-parameter-golf
+  SKIP_TTT: "1"
+
+runs:
+  - RUN_ID: baseline
+    RUN_NAME: baseline
+    NUM_LAYERS: "9"
+    NUM_UNIQUE_LAYERS: "1"
+    MODEL_DIM: "512"
+    MLP_MULT: "2"
