@@ -32,6 +32,7 @@ This makes short runs comparable to long ones by extrapolating to a common horiz
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -142,7 +143,129 @@ def add_wandb_scores(entries, target_steps, api_key=None):
         e["wb_bpb"] = wb_loss * BPB_SCALE if wb_loss is not None else None
 
 
-def print_table(entries, sort_by=None, show_proj=False, show_wb=False):
+def load_from_wandb(entity, project, jsonl_entries=None):
+    """
+    Build entry list from W&B (primary source) + optional JSONL supplement.
+    Includes crashed runs that never wrote to the JSONL.
+    Stores raw val history in _wb_val_pts for later interpolation.
+    """
+    try:
+        import wandb
+    except ImportError:
+        print("ERROR: wandb not installed. pip install wandb")
+        sys.exit(1)
+
+    api = wandb.Api()
+    print(f"  Fetching W&B runs from {entity}/{project} …")
+    try:
+        wb_runs = list(api.runs(f"{entity}/{project}"))
+    except Exception as exc:
+        print(f"ERROR fetching W&B runs: {exc}")
+        sys.exit(1)
+    print(f"  Found {len(wb_runs)} runs in W&B")
+
+    # JSONL lookup keyed by (docker_name, params_tag) for supplementary fields
+    jsonl_map = {}
+    for e in (jsonl_entries or []):
+        key = (e.get("docker_name", ""), e.get("params_tag", ""))
+        jsonl_map[key] = e
+
+    SUPPLEMENTARY = (
+        "val_bpb_int8", "val_bpb_ttt", "val_loss_int8", "val_loss_ttt",
+        "compressed_size_mb", "compressed_size_bytes",
+        "avg_ms_per_step", "total_time_s", "peak_memory_mib",
+        "timestamp", "hyperparams", "logfile", "run_id",
+    )
+
+    entries = []
+    for wb_run in wb_runs:
+        # Tags are [experiment, params_tag, docker_name]
+        tags = wb_run.tags or []
+        docker_name = next((t for t in tags if re.match(r'^[a-z]+-[a-z]+$', t)), None)
+        params_tag  = next((t for t in tags if re.match(r'^\d+L-', t)), None)
+        experiment  = next((t for t in tags
+                            if t not in (docker_name, params_tag)), "?")
+
+        if not docker_name or not params_tag:
+            # Fall back to parsing "{docker_name}_{params_tag}" from run name
+            m = re.match(r'^([a-z]+-[a-z]+)_(.+)$', wb_run.name)
+            if not m:
+                print(f"  WARN: cannot parse run '{wb_run.name}', skipping")
+                continue
+            docker_name = docker_name or m.group(1)
+            params_tag  = params_tag  or m.group(2)
+
+        # Fetch val_loss + val_bpb history (one call per run)
+        history = wb_run.history(keys=["val_loss", "val_bpb"], pandas=False)
+        val_pts = [
+            (int(row["_step"]), row["val_loss"], row.get("val_bpb"))
+            for row in history if row.get("val_loss") is not None
+        ]
+        if not val_pts:
+            print(f"  WARN: no val checkpoints for '{wb_run.name}', skipping")
+            continue
+
+        val_pts.sort()
+        last_step, last_loss, last_bpb = val_pts[-1]
+        if last_bpb is None:
+            last_bpb = last_loss * BPB_SCALE
+
+        # avg_ms_per_step from W&B summary if not in JSONL
+        wb_step_ms = None
+        summary = wb_run.summary or {}
+        if "step_avg_ms" in summary:
+            wb_step_ms = summary["step_avg_ms"]
+
+        entry = {
+            "docker_name":  docker_name,
+            "params_tag":   params_tag,
+            "experiment":   experiment,
+            "total_steps":  last_step,
+            "val_loss":     last_loss,
+            "val_bpb":      last_bpb,
+            "run_state":    wb_run.state,   # "finished" | "crashed" | "running"
+            "_wb_val_pts":  val_pts,        # raw curve kept for interpolation
+        }
+        if wb_step_ms is not None:
+            entry["avg_ms_per_step"] = wb_step_ms
+
+        # Merge supplementary JSONL fields
+        jsonl = jsonl_map.get((docker_name, params_tag), {})
+        for field in SUPPLEMENTARY:
+            if field in jsonl:
+                entry[field] = jsonl[field]
+        # If JSONL has a later/richer val_loss (clean exit), prefer it
+        if jsonl.get("val_loss") is not None:
+            entry["val_loss"] = jsonl["val_loss"]
+            entry["val_bpb"]  = jsonl.get("val_bpb", last_bpb)
+
+        entries.append(entry)
+
+    return entries
+
+
+def apply_target_steps(entries, target_steps):
+    """
+    Interpolate val_loss/val_bpb at target_steps from stored W&B curves.
+    Overwrites val_loss/val_bpb in-place so the main table uses fair values.
+    """
+    for e in entries:
+        pts = e.get("_wb_val_pts")
+        if not pts:
+            continue
+        steps_list, loss_list, bpb_list = zip(*pts)
+        loss = _interpolate(list(steps_list), list(loss_list), target_steps)
+        bpb  = _interpolate(list(steps_list),
+                            [b if b is not None else l * BPB_SCALE
+                             for l, b in zip(loss_list, bpb_list)],
+                            target_steps)
+        if loss is not None:
+            e["val_loss"] = loss
+            e["val_bpb"]  = bpb
+            e["total_steps"] = target_steps  # reflect the horizon we're comparing at
+
+
+def print_table(entries, sort_by=None, show_proj=False, show_wb=False, show_state=False):
     if not entries:
         print("No results found.")
         return
@@ -158,7 +281,10 @@ def print_table(entries, sort_by=None, show_proj=False, show_wb=False):
     entries.sort(key=sort_key)
     print(f"  Sorted by: {', '.join(keys)}")
 
+    STATE_ICON = {"finished": " ", "crashed": "!", "running": "~"}
+
     # Header
+    state_col = " S" if show_state else ""
     extra_cols = ""
     if show_proj:
         extra_cols += f" {'proj_loss':>10} {'proj_bpb':>9}"
@@ -168,7 +294,7 @@ def print_table(entries, sort_by=None, show_proj=False, show_wb=False):
         f"{'Rank':>4}  {'Docker Name':<20} {'Experiment':<12} "
         f"{'val_bpb':>8} {'bpb_int8':>9} {'bpb_ttt':>8} "
         f"{'loss':>7} {'ms/step':>8} {'steps':>6} {'size_MB':>8} {'Params':>18}"
-        f"{extra_cols}"
+        f"{state_col}{extra_cols}"
     )
     sep = "-" * len(hdr)
     print(f"\n{sep}")
@@ -177,6 +303,7 @@ def print_table(entries, sort_by=None, show_proj=False, show_wb=False):
 
     for i, e in enumerate(entries, 1):
         ptag = e.get("params_tag", "?")
+        state_str = f" {STATE_ICON.get(e.get('run_state', ''), '?')}" if show_state else ""
         extra_str = ""
         if show_proj:
             pl, pb = e.get("proj_loss"), e.get("proj_bpb")
@@ -189,9 +316,11 @@ def print_table(entries, sort_by=None, show_proj=False, show_wb=False):
             f"{e.get('val_bpb') or 0:>8.4f} {e.get('val_bpb_int8') or 0:>9.4f} {e.get('val_bpb_ttt') or 0:>8.4f} "
             f"{e.get('val_loss') or 0:>7.4f} {e.get('avg_ms_per_step') or 0:>8.1f} {e.get('total_steps') or 0:>6} "
             f"{e.get('compressed_size_mb') or 0:>8.2f} {ptag:>18}"
-            f"{extra_str}"
+            f"{state_str}{extra_str}"
         )
     print(sep)
+    if show_state:
+        print("  S column: ' '=finished  '!'=crashed  '~'=running")
     print(f"  Total runs: {len(entries)}\n")
 
 
@@ -338,27 +467,25 @@ def main():
         help="Fetch real val_loss curves from W&B and interpolate at a common step count",
     )
     parser.add_argument(
+        "--from-wandb", action="store_true",
+        help="Use W&B as primary source (includes crashed runs). "
+             "JSONL (if given) is used only to supplement compression/int8/TTT fields.",
+    )
+    parser.add_argument(
+        "--entity", default="citaman", metavar="ENTITY",
+        help="W&B entity (default: citaman)",
+    )
+    parser.add_argument(
+        "--project", default="Openai-challenge-parameter-golf", metavar="PROJECT",
+        help="W&B project name",
+    )
+    parser.add_argument(
         "--target-steps", type=int, default=None, metavar="N",
-        help="Step count to compare at with --wandb (default: min total_steps across all runs)",
+        help="Compare all runs at this step using real W&B curves. "
+             "With --from-wandb: default is min steps seen. "
+             "With --wandb: default is min total_steps in JSONL.",
     )
     args = parser.parse_args()
-
-    # Default: global results file
-    if args.results_file is None:
-        default_path = Path(__file__).resolve().parent.parent / "results" / "all_runs.jsonl"
-        if not default_path.exists():
-            print(f"No results file found at {default_path}")
-            print("Run a training first, or pass a path: python scripts/ranking.py <path>")
-            sys.exit(1)
-        results_path = default_path
-    else:
-        results_path = Path(args.results_file)
-
-    if not results_path.exists():
-        print(f"File not found: {results_path}")
-        sys.exit(1)
-
-    entries = load_results(results_path)
 
     if args.sort:
         invalid = [f for f in args.sort if f not in NUMERIC_FIELDS]
@@ -367,29 +494,71 @@ def main():
             print(f"Available: {', '.join(NUMERIC_FIELDS)}")
             sys.exit(1)
 
-    show_proj = args.normalize is not None
-    if show_proj:
-        all_steps = [e.get("total_steps") or 0 for e in entries]
-        target = max(all_steps) if args.normalize == -1 else args.normalize
-        add_projected_scores(entries, target_steps=target, alpha=args.alpha)
-        print(f"\n  Normalization: projecting to {target} steps  (α={args.alpha})")
+    # --- Primary data source ---
+    if args.from_wandb:
+        # Load JSONL as supplement if provided (optional)
+        jsonl_entries = None
+        if args.results_file:
+            p = Path(args.results_file)
+            jsonl_entries = load_results(p) if p.exists() else None
 
-    show_wb = args.wandb
-    if show_wb:
-        all_steps = [e.get("total_steps") or 0 for e in entries if e.get("total_steps")]
-        target_steps = args.target_steps or min(all_steps)
-        print(f"\n  W&B comparison at step {target_steps} (interpolated from real curves)")
-        add_wandb_scores(entries, target_steps=target_steps)
+        entries = load_from_wandb(args.entity, args.project, jsonl_entries)
 
-    # Default sort: wb_bpb > proj_bpb > standard when the relevant mode is active
-    sort_by = args.sort
-    if sort_by is None:
+        if args.target_steps:
+            print(f"  Comparing at step {args.target_steps} (interpolated from W&B curves)")
+            apply_target_steps(entries, args.target_steps)
+        else:
+            print("  Using each run's last checkpoint (pass --target-steps N for a common horizon)")
+
+        show_proj = args.normalize is not None
+        if show_proj:
+            all_steps = [e.get("total_steps") or 0 for e in entries]
+            target = max(all_steps) if args.normalize == -1 else args.normalize
+            add_projected_scores(entries, target_steps=target, alpha=args.alpha)
+
+        sort_by = args.sort or ["val_bpb"]
+        print_table(entries, sort_by=sort_by, show_proj=show_proj, show_state=True)
+
+    else:
+        # JSONL-primary path (original behavior)
+        if args.results_file is None:
+            default_path = Path(__file__).resolve().parent.parent / "results" / "all_runs.jsonl"
+            if not default_path.exists():
+                print(f"No results file found at {default_path}")
+                print("Run a training first, or pass a path: python scripts/ranking.py <path>")
+                sys.exit(1)
+            results_path = default_path
+        else:
+            results_path = Path(args.results_file)
+
+        if not results_path.exists():
+            print(f"File not found: {results_path}")
+            sys.exit(1)
+
+        entries = load_results(results_path)
+
+        show_proj = args.normalize is not None
+        if show_proj:
+            all_steps = [e.get("total_steps") or 0 for e in entries]
+            target = max(all_steps) if args.normalize == -1 else args.normalize
+            add_projected_scores(entries, target_steps=target, alpha=args.alpha)
+            print(f"\n  Normalization: projecting to {target} steps  (α={args.alpha})")
+
+        show_wb = args.wandb
         if show_wb:
-            sort_by = ["wb_bpb"]
-        elif show_proj:
-            sort_by = ["proj_bpb"]
+            all_steps = [e.get("total_steps") or 0 for e in entries if e.get("total_steps")]
+            target_steps = args.target_steps or min(all_steps)
+            print(f"\n  W&B comparison at step {target_steps} (interpolated from real curves)")
+            add_wandb_scores(entries, target_steps=target_steps)
 
-    print_table(entries, sort_by=sort_by, show_proj=show_proj, show_wb=show_wb)
+        sort_by = args.sort
+        if sort_by is None:
+            if show_wb:
+                sort_by = ["wb_bpb"]
+            elif show_proj:
+                sort_by = ["proj_bpb"]
+
+        print_table(entries, sort_by=sort_by, show_proj=show_proj, show_wb=show_wb)
 
     if args.chart:
         print("Generating charts...")

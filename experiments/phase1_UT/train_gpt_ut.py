@@ -1244,7 +1244,7 @@ def main() -> None:
     now = datetime.datetime.now()
     date_str = now.strftime("%Y-%m-%d")
     time_str = now.strftime("%H%M%S")
-    docker_name = _generate_docker_name(seed=args.run_id)
+    docker_name = os.environ.get("RUN_NAME") or _generate_docker_name(seed=args.run_id)
     ptag = _params_tag(args)
     experiment = _experiment_name()
     wandb_run_name = f"{docker_name}_{ptag}"
