@@ -19,7 +19,7 @@ defaults:
   TRAIN_LOG_EVERY: "10"
   WANDB_ENABLED: "1"
   WANDB_PROJECT: Openai-challenge-parameter-golf
-  GRAD_ACCUM_STEPS: "1"
+  GRAD_ACCUM_STEPS: "2"
 
 runs:
 
@@ -37,11 +37,50 @@ runs:
     MODEL_DIM: "512"
     MLP_MULT: "2"
 
-  - RUN_ID: sweep_10L_5U_512d
+  - RUN_ID: sweep_12L_6U_512d_2MLP
+    NUM_LAYERS: "12"
+    NUM_UNIQUE_LAYERS: "6"
+    MODEL_DIM: "512"
+    MLP_MULT: "2"
+    
+  # --- Baseline (20L, 10U, dim=512) ---
+  - RUN_ID: sweep_12L_5U_512d_2MLP
+    NUM_LAYERS: "12"
+    NUM_UNIQUE_LAYERS: "3"
+    MODEL_DIM: "640"
+    MLP_MULT: "2"
+    
+  - RUN_ID: sweep_14L_2U_512d_2MLP
+    NUM_LAYERS: "14"
+    NUM_UNIQUE_LAYERS: "2"
+    MODEL_DIM: "512"
+    MLP_MULT: "2"
+
+  - RUN_ID: sweep_16L_4U_512d_2MLP
+    NUM_LAYERS: "14"
+    NUM_UNIQUE_LAYERS: "2"
+    MODEL_DIM: "512"
+    MLP_MULT: "2"
+
+  - RUN_ID: sweep_10L_2U_768d_2MLP
+    NUM_LAYERS: "10"
+    NUM_UNIQUE_LAYERS: "2"
+    MODEL_DIM: "768"
+    MLP_MULT: "2"
+
+  - RUN_ID: sweep_12L_3U_512d_2MLP
+    NUM_LAYERS: "12"
+    NUM_UNIQUE_LAYERS: "3"
+    MODEL_DIM: "512"
+    MLP_MULT: "2"
+    
+  # Try wider model
+  - RUN_ID: test_10L_5U_640d
     NUM_LAYERS: "10"
     NUM_UNIQUE_LAYERS: "5"
-    MODEL_DIM: "784"
+    MODEL_DIM: "640"
     MLP_MULT: "2"
+  
 
 
 
