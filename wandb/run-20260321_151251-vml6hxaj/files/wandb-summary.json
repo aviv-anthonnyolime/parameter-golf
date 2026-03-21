@@ -1,0 +1,1 @@
+{"lr_scale":0.0034040123776479404,"train_time_s":3600.5,"val_bpb_int8":1.2433912977308375,"_wandb":{"runtime":3845},"val_bpb":1.237819126711161,"step_avg_ms":548.5090675103626,"val_loss":2.0900057453158793,"train_loss":2.0893688201904297,"compressed_size_mb":15.08,"total_steps":6564,"_runtime":3845.261240084,"_timestamp":1.7741097970367284e+09,"_step":6564}
