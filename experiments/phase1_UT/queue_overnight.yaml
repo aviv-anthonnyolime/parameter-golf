@@ -42,45 +42,49 @@ runs:
     NUM_UNIQUE_LAYERS: "6"
     MODEL_DIM: "512"
     MLP_MULT: "2"
+
+  # --- Unique layers sweep (fixed 20L, dim=512) ---
+  - RUN_ID: sweep_15L_5U_512d
+    NUM_LAYERS: "15"
+    NUM_UNIQUE_LAYERS: "5"
+    MODEL_DIM: "512"
+    MLP_MULT: "2"
+
     
   # --- Baseline (20L, 10U, dim=512) ---
-  - RUN_ID: sweep_12L_5U_512d_2MLP
-    NUM_LAYERS: "12"
-    NUM_UNIQUE_LAYERS: "3"
+  - RUN_ID: sweep_18L_9U_640d_2MLP
+    NUM_LAYERS: "18"
+    NUM_UNIQUE_LAYERS: "9"
     MODEL_DIM: "640"
     MLP_MULT: "2"
-    
-  - RUN_ID: sweep_14L_2U_512d_2MLP
-    NUM_LAYERS: "14"
-    NUM_UNIQUE_LAYERS: "2"
-    MODEL_DIM: "512"
-    MLP_MULT: "2"
 
-  - RUN_ID: sweep_16L_4U_512d_2MLP
+  - RUN_ID: sweep_16L_8U_640d_2MLP
     NUM_LAYERS: "16"
-    NUM_UNIQUE_LAYERS: "4"
-    MODEL_DIM: "512"
+    NUM_UNIQUE_LAYERS: "8"
+    MODEL_DIM: "640"
     MLP_MULT: "2"
 
-  - RUN_ID: sweep_10L_2U_768d_2MLP
+  - RUN_ID: sweep_14L_7U_640d_2MLP
+    NUM_LAYERS: "14"
+    NUM_UNIQUE_LAYERS: "7"
+    MODEL_DIM: "640"
+    MLP_MULT: "2"
+
+  - RUN_ID: sweep_10L_5U_768d_2MLP
     NUM_LAYERS: "10"
-    NUM_UNIQUE_LAYERS: "2"
+    NUM_UNIQUE_LAYERS: "5"
     MODEL_DIM: "768"
     MLP_MULT: "2"
 
-  - RUN_ID: sweep_20L_3U_512d_2MLP
-    NUM_LAYERS: "20"
-    NUM_UNIQUE_LAYERS: "5"
-    MODEL_DIM: "512"
-    MLP_MULT: "2"
+  # - RUN_ID: sweep_12L_6U_640d_2MLP
+  #   NUM_LAYERS: "12"
+  #   NUM_UNIQUE_LAYERS: "6"
+  #   MODEL_DIM: "640"
+  #   MLP_MULT: "2"
+
+
     
-  # Try wider model
-  - RUN_ID: test_10L_5U_640d
-    NUM_LAYERS: "10"
-    NUM_UNIQUE_LAYERS: "5"
-    MODEL_DIM: "640"
-    MLP_MULT: "2"
-  
+
 
 
 

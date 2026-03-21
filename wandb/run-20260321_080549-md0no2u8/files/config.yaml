@@ -1,0 +1,168 @@
+_wandb:
+    value:
+        cli_version: 0.23.0
+        e:
+            znygcfkc3ybctuot7mxsdkt0dk91t6t6:
+                codePath: experiments/phase1_UT/train_gpt_ut.py
+                codePathLocal: experiments/phase1_UT/train_gpt_ut.py
+                cpu_count: 24
+                cpu_count_logical: 48
+                cudaVersion: "12.8"
+                disk:
+                    /:
+                        total: "144942542848"
+                        used: "119423094784"
+                email: anthonnyolime@gmail.com
+                executable: /opt/pg-venv/bin/python3
+                git:
+                    commit: cab520b7717c38e0e001f8259e316dc80f45ddb3
+                    remote: git@github.com:aviv-anthonnyolime/parameter-golf.git
+                gpu: NVIDIA A10G
+                gpu_count: 4
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 10240
+                      memoryTotal: "24146608128"
+                      name: NVIDIA A10G
+                      uuid: GPU-06f88b38-d8de-08df-64ef-305463c3a004
+                    - architecture: Ampere
+                      cudaCores: 10240
+                      memoryTotal: "24146608128"
+                      name: NVIDIA A10G
+                      uuid: GPU-ab604842-47ed-8702-91da-d0bb46f92c28
+                    - architecture: Ampere
+                      cudaCores: 10240
+                      memoryTotal: "24146608128"
+                      name: NVIDIA A10G
+                      uuid: GPU-1fb2234b-3b06-f057-821e-62627f437d0e
+                    - architecture: Ampere
+                      cudaCores: 10240
+                      memoryTotal: "24146608128"
+                      name: NVIDIA A10G
+                      uuid: GPU-b80aac7c-686b-b186-66f5-c7475c7488bf
+                host: ip-172-16-58-107.eu-west-1.compute.internal
+                memory:
+                    total: "200485216256"
+                os: Linux-5.10.248-247.988.amzn2.x86_64-x86_64-with-glibc2.26
+                program: /home/ec2-user/SageMaker/parameter-golf/experiments/phase1_UT/train_gpt_ut.py
+                python: CPython 3.10.19
+                root: /home/ec2-user/SageMaker/parameter-golf
+                startedAt: "2026-03-21T08:05:49.591743Z"
+                writerId: znygcfkc3ybctuot7mxsdkt0dk91t6t6
+        m: []
+        python_version: 3.10.19
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+            "3":
+                - 13
+                - 15
+                - 16
+            "4": 3.10.19
+            "5": 0.23.0
+            "12": 0.23.0
+            "13": linux-x86_64
+adam_eps:
+    value: 1e-08
+beta1:
+    value: 0.9
+beta2:
+    value: 0.95
+data_path:
+    value: ./data/datasets/fineweb10B_sp1024
+embed_lr:
+    value: 0.6
+grad_accum_steps_override:
+    value: 2
+grad_clip_norm:
+    value: 0
+head_lr:
+    value: 0.008
+iterations:
+    value: 20000
+logit_softcap:
+    value: 30
+matrix_lr:
+    value: 0.04
+max_wallclock_seconds:
+    value: 3600
+mlp_mult:
+    value: 2
+model_dim:
+    value: 640
+muon_backend_steps:
+    value: 5
+muon_momentum:
+    value: 0.95
+muon_momentum_warmup_start:
+    value: 0.85
+muon_momentum_warmup_steps:
+    value: 500
+num_heads:
+    value: 8
+num_kv_heads:
+    value: 4
+num_layers:
+    value: 16
+num_unique_layers:
+    value: 8
+qk_gain_init:
+    value: 1.5
+rope_base:
+    value: 10000
+run_id:
+    value: sweep_16L_8U_640d_2MLP
+scalar_lr:
+    value: 0.04
+seed:
+    value: 1337
+skip_ttt:
+    value: 0
+tie_embeddings:
+    value: true
+tied_embed_init_std:
+    value: 0.005
+tied_embed_lr:
+    value: 0.05
+tokenizer_path:
+    value: ./data/tokenizers/fineweb_1024_bpe.model
+train_batch_tokens:
+    value: 524288
+train_files:
+    value: ./data/datasets/fineweb10B_sp1024/fineweb_train_*.bin
+train_log_every:
+    value: 10
+train_seq_len:
+    value: 1024
+ttt_batch_size:
+    value: 64
+ttt_chunk_size:
+    value: 256
+ttt_eval_seq_len:
+    value: 1024
+ttt_lora_lr:
+    value: 0.01
+ttt_lora_rank:
+    value: 8
+val_batch_size:
+    value: 524288
+val_files:
+    value: ./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin
+val_loss_every:
+    value: 1000
+vocab_size:
+    value: 1024
+wandb_api_key:
+    value: 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
+wandb_enabled:
+    value: true
+wandb_entity:
+    value: citaman
+wandb_project:
+    value: Openai-challenge-parameter-golf
+warmdown_iters:
+    value: 0
+warmup_steps:
+    value: 20
