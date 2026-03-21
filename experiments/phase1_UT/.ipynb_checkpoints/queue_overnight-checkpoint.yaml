@@ -31,10 +31,10 @@ runs:
     MLP_MULT: "2"
 
   # --- Unique layers sweep (fixed 20L, dim=512) ---
-  - RUN_ID: sweep_20L_5U_512d
-    NUM_LAYERS: "20"
+  - RUN_ID: sweep_15L_5U_640d
+    NUM_LAYERS: "15"
     NUM_UNIQUE_LAYERS: "5"
-    MODEL_DIM: "512"
+    MODEL_DIM: "640"
     MLP_MULT: "2"
 
   - RUN_ID: sweep_12L_6U_512d_2MLP
@@ -57,8 +57,8 @@ runs:
     MLP_MULT: "2"
 
   - RUN_ID: sweep_16L_4U_512d_2MLP
-    NUM_LAYERS: "14"
-    NUM_UNIQUE_LAYERS: "2"
+    NUM_LAYERS: "16"
+    NUM_UNIQUE_LAYERS: "4"
     MODEL_DIM: "512"
     MLP_MULT: "2"
 
@@ -68,9 +68,9 @@ runs:
     MODEL_DIM: "768"
     MLP_MULT: "2"
 
-  - RUN_ID: sweep_12L_3U_512d_2MLP
-    NUM_LAYERS: "12"
-    NUM_UNIQUE_LAYERS: "3"
+  - RUN_ID: sweep_20L_3U_512d_2MLP
+    NUM_LAYERS: "20"
+    NUM_UNIQUE_LAYERS: "5"
     MODEL_DIM: "512"
     MLP_MULT: "2"
     
