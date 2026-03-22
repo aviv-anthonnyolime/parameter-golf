@@ -167,7 +167,8 @@ def load_from_wandb(entity, project, jsonl_entries=None):
     # JSONL lookup keyed by (docker_name, params_tag) for supplementary fields
     jsonl_map = {}
     for e in (jsonl_entries or []):
-        key = (e.get("docker_name", ""), e.get("params_tag", ""))
+        name = e.get("docker_name", "") or e.get("run_name", "")
+        key = (name, e.get("params_tag", ""))
         jsonl_map[key] = e
 
     SUPPLEMENTARY = (
@@ -181,14 +182,14 @@ def load_from_wandb(entity, project, jsonl_entries=None):
     for wb_run in wb_runs:
         # Tags are [experiment, params_tag, docker_name]
         tags = wb_run.tags or []
-        docker_name = next((t for t in tags if re.match(r'^[a-z]+-[a-z]+$', t)), None)
+        docker_name = next((t for t in tags if re.match(r'^[a-z]+(-[a-z]+)?$', t)), None)
         params_tag  = next((t for t in tags if re.match(r'^\d+L-', t)), None)
         experiment  = next((t for t in tags
                             if t not in (docker_name, params_tag)), "?")
 
         if not docker_name or not params_tag:
-            # Fall back to parsing "{docker_name}_{params_tag}" from run name
-            m = re.match(r'^([a-z]+-[a-z]+)_(.+)$', wb_run.name)
+            # Fall back to parsing "{name}_{params_tag}" from run name
+            m = re.match(r'^([a-z]+(?:-[a-z]+)?)_(.+)$', wb_run.name)
             if not m:
                 print(f"  WARN: cannot parse run '{wb_run.name}', skipping")
                 continue
