@@ -10,3 +10,6 @@ data/docs_selected.jsonl
 .mypy_cache/
 .venv
 logs/
+*.pt
+*.pth
+*.ptz
