@@ -40,10 +40,10 @@ runs:
   #   ADAPTER_ALPHA: "16"
   #   ADAPTER_LOCATION: "qv-attn"
 
-  - RUN_ID: peft_lora_r64_all
-    ADAPTER_RANK: "64"
-    ADAPTER_ALPHA: "64"
-    ADAPTER_LOCATION: "all"
+  # - RUN_ID: peft_lora_r64_all
+  #   ADAPTER_RANK: "64"
+  #   ADAPTER_ALPHA: "64"
+  #   ADAPTER_LOCATION: "all"
 
   # --- Test with 5U to check if trends hold with more unique layers ---
   - RUN_ID: peft_lora_r128_qv_5U
