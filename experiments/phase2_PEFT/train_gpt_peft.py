@@ -184,7 +184,11 @@ def _generate_docker_name(seed=None):
 
 
 def _params_tag(args):
-    return f"{args.num_layers}L-{args.num_unique_layers}U-{args.model_dim}d-{args.mlp_mult}mlp"
+    base = f"{args.num_layers}L-{args.num_unique_layers}U-{args.model_dim}d-{args.mlp_mult}mlp"
+    if args.adapter_method:
+        loc = args.adapter_location.replace("-", "")  # "qvattn", "all", etc.
+        base += f"_{args.adapter_method}-r{args.adapter_rank}-{loc}"
+    return base
 
 
 def _experiment_name():
