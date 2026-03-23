@@ -14,6 +14,10 @@ defaults:
   WANDB_ENABLED: "1"
   WANDB_PROJECT: Openai-challenge-parameter-golf
   SKIP_TTT: "1"          # skip ~10min TTT LoRA eval; set "0" for final/overnight runs
+  # Warmdown: ~20% of total steps for a 2000s run
+  # 10L-5U-512d ≈ 3452 steps @ 579ms/step → 690 warmdown steps ≈ 400s
+  # LR stays at peak until ~1600s, then linearly decays to 0.
+  WARMDOWN_ITERS: "690"
 
 runs:
   # Baseline: 10L-1U-512d

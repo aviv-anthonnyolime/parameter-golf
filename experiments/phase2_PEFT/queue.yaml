@@ -23,8 +23,12 @@ defaults:
   MLP_MULT: "2"
   NUM_HEADS: "8"
   NUM_KV_HEADS: "4"
-  # Warmdown enabled!
-  WARMDOWN_ITERS: "1200"
+  # Warmdown: ~20% of total steps for a 1200s run
+  # 10L-5U-512d ≈ 2000 steps @ ~600ms/step (PEFT overhead) → 400 warmdown steps ≈ 240s
+  # LR stays at peak until ~960s, then linearly decays to 0.
+  # NOTE: do NOT use the base-script default of 1200 here — that would put 58% of
+  #       a 1200s run in warmdown (695s), killing useful learning time.
+  WARMDOWN_ITERS: "400"
   # PEFT defaults
   PEFT_METHOD: "lora"
   PEFT_RANK: "8"
