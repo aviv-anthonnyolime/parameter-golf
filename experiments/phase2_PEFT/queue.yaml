@@ -30,40 +30,33 @@ defaults:
   ADAPTER_METHOD: "lora"
   ADAPTER_RANK: "16"
   ADAPTER_ALPHA: "16"
-  ADAPTER_LOCATION: "qv-attn"
+  ADAPTER_LOCATION: "all"
+  SKIP_TTT: "1"          # skip ~10min TTT LoRA eval; set "0" for final/overnight runs
 
 runs:
   # --- Step 1: LoRA rank sweep (qv-attn, cheapest location) ---
-  - RUN_ID: peft_lora_r16_qv
+  # - RUN_ID: peft_lora_r16_qv
+  #   ADAPTER_RANK: "16"
+  #   ADAPTER_ALPHA: "16"
+  #   ADAPTER_LOCATION: "qv-attn"
+
+  - RUN_ID: peft_lora_r64_all
+    ADAPTER_RANK: "64"
+    ADAPTER_ALPHA: "64"
+    ADAPTER_LOCATION: "all"
+
+  # --- Test with 5U to check if trends hold with more unique layers ---
+  - RUN_ID: peft_lora_r128_qv_5U
+    ADAPTER_RANK: "64"
+    ADAPTER_ALPHA: "64"
+    ADAPTER_LOCATION: "qv-attn"
+    NUM_UNIQUE_LAYERS: "5"
+    
+  - RUN_ID: peft_lora_r128_all_5U
     ADAPTER_RANK: "16"
     ADAPTER_ALPHA: "16"
-
-  - RUN_ID: peft_lora_r128_qv
-    ADAPTER_RANK: "128"
-    ADAPTER_ALPHA: "128"
-
-  - RUN_ID: peft_lora_r256_qv
-    ADAPTER_RANK: "256"
-    ADAPTER_ALPHA: "256"
-
-  # --- Step 2: Location ablation at best rank (start with r128) ---
-  - RUN_ID: peft_lora_r128_qv_ffn
-    ADAPTER_RANK: "128"
-    ADAPTER_ALPHA: "128"
-    ADAPTER_LOCATION: "qv-attn-ffn"
-
-  - RUN_ID: peft_lora_r128_all
-    ADAPTER_RANK: "128"
-    ADAPTER_ALPHA: "128"
     ADAPTER_LOCATION: "all"
-  
-  # --- Test with TrainSeqLen 2048 to check if trends hold with longer context ---
-  - RUN_ID: peft_lora_r128_qv_2048
-    ADAPTER_RANK: "128"
-    ADAPTER_ALPHA: "128"
-    ADAPTER_LOCATION: "all"
-    TRAIN_SEQ_LEN: "2048"
-
+    NUM_UNIQUE_LAYERS: "5"
 
   # --- Step 3: Method comparison at rank 128 ---
   # Uncomment once LoRA baseline is established

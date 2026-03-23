@@ -39,30 +39,144 @@ except ImportError:
 
 # Docker-style name generator (inline to avoid import path issues with torchrun)
 _NAME_ADJECTIVES = [
-    "agile", "bold", "brave", "bright", "calm", "clever", "cool", "cosmic",
-    "crisp", "dark", "deep", "eager", "epic", "fair", "fast", "fierce",
-    "fleet", "frosty", "gentle", "grand", "happy", "hardy", "keen", "kind",
-    "lively", "lucky", "merry", "mighty", "noble", "plucky", "proud", "quick",
-    "quiet", "rapid", "rustic", "sharp", "shiny", "silent", "sleek", "smooth",
-    "snappy", "solar", "solid", "spicy", "stark", "steady", "stoic", "strong",
-    "super", "swift", "tidy", "tough", "vivid", "warm", "wild", "wise",
-    "witty", "zany", "zen", "zippy",
+    "agile",
+    "bold",
+    "brave",
+    "bright",
+    "calm",
+    "clever",
+    "cool",
+    "cosmic",
+    "crisp",
+    "dark",
+    "deep",
+    "eager",
+    "epic",
+    "fair",
+    "fast",
+    "fierce",
+    "fleet",
+    "frosty",
+    "gentle",
+    "grand",
+    "happy",
+    "hardy",
+    "keen",
+    "kind",
+    "lively",
+    "lucky",
+    "merry",
+    "mighty",
+    "noble",
+    "plucky",
+    "proud",
+    "quick",
+    "quiet",
+    "rapid",
+    "rustic",
+    "sharp",
+    "shiny",
+    "silent",
+    "sleek",
+    "smooth",
+    "snappy",
+    "solar",
+    "solid",
+    "spicy",
+    "stark",
+    "steady",
+    "stoic",
+    "strong",
+    "super",
+    "swift",
+    "tidy",
+    "tough",
+    "vivid",
+    "warm",
+    "wild",
+    "wise",
+    "witty",
+    "zany",
+    "zen",
+    "zippy",
 ]
 _NAME_ANIMALS = [
-    "alpaca", "badger", "bear", "bison", "cobra", "condor", "crane", "crow",
-    "deer", "dingo", "eagle", "egret", "elk", "falcon", "ferret", "finch",
-    "fox", "gecko", "goose", "gorilla", "hawk", "heron", "horse", "husky",
-    "ibis", "iguana", "impala", "jackal", "jaguar", "jay", "kite", "koala",
-    "lark", "lemur", "lion", "llama", "lynx", "macaw", "mink", "moose",
-    "newt", "okapi", "orca", "osprey", "otter", "owl", "panda", "parrot",
-    "puma", "quail", "raven", "robin", "salmon", "seal", "shark", "sloth",
-    "snake", "squid", "stork", "swan", "tiger", "toucan", "trout", "viper",
-    "whale", "wolf", "wren", "yak", "zebra", "zorilla",
+    "alpaca",
+    "badger",
+    "bear",
+    "bison",
+    "cobra",
+    "condor",
+    "crane",
+    "crow",
+    "deer",
+    "dingo",
+    "eagle",
+    "egret",
+    "elk",
+    "falcon",
+    "ferret",
+    "finch",
+    "fox",
+    "gecko",
+    "goose",
+    "gorilla",
+    "hawk",
+    "heron",
+    "horse",
+    "husky",
+    "ibis",
+    "iguana",
+    "impala",
+    "jackal",
+    "jaguar",
+    "jay",
+    "kite",
+    "koala",
+    "lark",
+    "lemur",
+    "lion",
+    "llama",
+    "lynx",
+    "macaw",
+    "mink",
+    "moose",
+    "newt",
+    "okapi",
+    "orca",
+    "osprey",
+    "otter",
+    "owl",
+    "panda",
+    "parrot",
+    "puma",
+    "quail",
+    "raven",
+    "robin",
+    "salmon",
+    "seal",
+    "shark",
+    "sloth",
+    "snake",
+    "squid",
+    "stork",
+    "swan",
+    "tiger",
+    "toucan",
+    "trout",
+    "viper",
+    "whale",
+    "wolf",
+    "wren",
+    "yak",
+    "zebra",
+    "zorilla",
 ]
 
 
 def _generate_docker_name(seed=None):
     import hashlib
+
     if isinstance(seed, str):
         seed = int(hashlib.sha256(seed.encode()).hexdigest(), 16)
     rng = random.Random(seed)
@@ -77,6 +191,7 @@ def _experiment_name():
     """Derive experiment folder name from script path (e.g. 'phase1_UT')."""
     script_dir = Path(__file__).resolve().parent.name
     return script_dir
+
 
 # -----------------------------
 # HYPERPARAMETERS
@@ -1262,7 +1377,9 @@ def main() -> None:
     if master_process and args.wandb_enabled and _WANDB_AVAILABLE:
         if args.wandb_api_key:
             wandb.login(key=args.wandb_api_key)
-        hp_dict = {k: v for k, v in vars(args.__class__).items() if not k.startswith("_")}
+        hp_dict = {
+            k: v for k, v in vars(args.__class__).items() if not k.startswith("_")
+        }
         wandb_run = wandb.init(
             entity=args.wandb_entity,
             project=args.wandb_project,
@@ -1623,7 +1740,10 @@ def main() -> None:
                 f"train_time:{approx_training_time_ms:.0f}ms step_avg:{step_avg_ms:.2f}ms"
             )
             if wandb_run is not None:
-                wandb_run.log({"train_loss": tl, "step_avg_ms": step_avg_ms, "lr_scale": scale}, step=step)
+                wandb_run.log(
+                    {"train_loss": tl, "step_avg_ms": step_avg_ms, "lr_scale": scale},
+                    step=step,
+                )
 
         # Needed to sync whether we've reached the wallclock cap.
         reached_cap = (
@@ -1746,8 +1866,12 @@ def main() -> None:
             "val_bpb": round(float(val_bpb), 6),
             "val_loss_int8": round(float(q_val_loss), 6),
             "val_bpb_int8": round(float(q_val_bpb), 6),
-            "val_loss_ttt": round(float(ttt_val_loss), 6) if ttt_val_loss is not None else None,
-            "val_bpb_ttt": round(float(ttt_val_bpb), 6) if ttt_val_bpb is not None else None,
+            "val_loss_ttt": (
+                round(float(ttt_val_loss), 6) if ttt_val_loss is not None else None
+            ),
+            "val_bpb_ttt": (
+                round(float(ttt_val_bpb), 6) if ttt_val_bpb is not None else None
+            ),
             "compressed_size_bytes": quant_file_bytes,
             "compressed_size_mb": round(quant_file_bytes / 1024**2, 2),
             "peak_memory_mib": torch.cuda.max_memory_allocated() // 1024 // 1024,
@@ -1766,7 +1890,9 @@ def main() -> None:
         log0(f"results_saved: {exp_results}")
 
         # Global results file
-        global_results = Path(__file__).resolve().parent.parent.parent / "results" / "all_runs.jsonl"
+        global_results = (
+            Path(__file__).resolve().parent.parent.parent / "results" / "all_runs.jsonl"
+        )
         global_results.parent.mkdir(parents=True, exist_ok=True)
         with open(global_results, "a", encoding="utf-8") as f:
             f.write(result_line + "\n")
@@ -1774,15 +1900,21 @@ def main() -> None:
 
     # --- W&B summary + finish ---
     if wandb_run is not None:
-        wandb_run.summary.update({
-            "final_val_loss": float(val_loss) if val_loss is not None else None,
-            "final_val_bpb": float(val_bpb) if val_bpb is not None else None,
-            "final_val_bpb_int8": float(q_val_bpb) if q_val_bpb is not None else None,
-            "final_val_bpb_ttt": float(ttt_val_bpb) if ttt_val_bpb is not None else None,
-            "total_steps": step,
-            "avg_ms_per_step": round(training_time_ms / max(step, 1), 2),
-            "compressed_size_mb": round(quant_file_bytes / 1024**2, 2),
-        })
+        wandb_run.summary.update(
+            {
+                "final_val_loss": float(val_loss) if val_loss is not None else None,
+                "final_val_bpb": float(val_bpb) if val_bpb is not None else None,
+                "final_val_bpb_int8": (
+                    float(q_val_bpb) if q_val_bpb is not None else None
+                ),
+                "final_val_bpb_ttt": (
+                    float(ttt_val_bpb) if ttt_val_bpb is not None else None
+                ),
+                "total_steps": step,
+                "avg_ms_per_step": round(training_time_ms / max(step, 1), 2),
+                "compressed_size_mb": round(quant_file_bytes / 1024**2, 2),
+            }
+        )
         wandb_run.finish()
 
     if distributed:
