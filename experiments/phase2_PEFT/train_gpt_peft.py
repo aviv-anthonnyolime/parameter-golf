@@ -238,7 +238,7 @@ class Hyperparameters:
     # Warmdown disabled by default for sweeps. Set to 1200 for final 8xH100 runs.
     warmdown_iters = int(os.environ.get("WARMDOWN_ITERS", 0))
     warmup_steps = int(os.environ.get("WARMUP_STEPS", 20))
-    train_batch_tokens = int(os.environ.get("TRAIN_BATCH_TOKENS", 524_288))
+    train_batch_tokens = int(os.environ.get("TRAIN_BATCH_TOKENS", 786_432))
     train_seq_len = int(os.environ.get("TRAIN_SEQ_LEN", 1024))
     max_wallclock_seconds = float(os.environ.get("MAX_WALLCLOCK_SECONDS", 600.0))
     qk_gain_init = float(os.environ.get("QK_GAIN_INIT", 1.5))
@@ -247,7 +247,7 @@ class Hyperparameters:
     vocab_size = int(os.environ.get("VOCAB_SIZE", 1024))
     num_layers = int(os.environ.get("NUM_LAYERS", 10))
     num_unique_layers = int(os.environ.get("NUM_UNIQUE_LAYERS", 1))
-    num_kv_heads = int(os.environ.get("NUM_KV_HEADS", 4))
+    num_kv_heads = int(os.environ.get("NUM_KV_HEADS", 8))
     model_dim = int(os.environ.get("MODEL_DIM", 512))
     num_heads = int(os.environ.get("NUM_HEADS", 8))
     mlp_mult = int(os.environ.get("MLP_MULT", 2))
@@ -266,20 +266,22 @@ class Hyperparameters:
     # Optimizer hyperparameters.
     embed_lr = float(os.environ.get("EMBED_LR", 0.6))
     head_lr = float(os.environ.get("HEAD_LR", 0.008))
-    tied_embed_lr = float(os.environ.get("TIED_EMBED_LR", 0.05))
+    tied_embed_lr = float(os.environ.get("TIED_EMBED_LR", 0.035))
     tied_embed_init_std = float(os.environ.get("TIED_EMBED_INIT_STD", 0.005))
-    matrix_lr = float(os.environ.get("MATRIX_LR", 0.04))
-    scalar_lr = float(os.environ.get("SCALAR_LR", 0.04))
-    muon_momentum = float(os.environ.get("MUON_MOMENTUM", 0.95))
+    matrix_lr = float(os.environ.get("MATRIX_LR", 0.025))
+    scalar_lr = float(os.environ.get("SCALAR_LR", 0.025))
+    muon_momentum = float(os.environ.get("MUON_MOMENTUM", 0.99))
     muon_backend_steps = int(os.environ.get("MUON_BACKEND_STEPS", 5))
     muon_momentum_warmup_start = float(
-        os.environ.get("MUON_MOMENTUM_WARMUP_START", 0.85)
+        os.environ.get("MUON_MOMENTUM_WARMUP_START", 0.92)
     )
-    muon_momentum_warmup_steps = int(os.environ.get("MUON_MOMENTUM_WARMUP_STEPS", 500))
+    muon_momentum_warmup_steps = int(
+        os.environ.get("MUON_MOMENTUM_WARMUP_STEPS", 1500 / 2)
+    )
     beta1 = float(os.environ.get("BETA1", 0.9))
     beta2 = float(os.environ.get("BETA2", 0.95))
     adam_eps = float(os.environ.get("ADAM_EPS", 1e-8))
-    grad_clip_norm = float(os.environ.get("GRAD_CLIP_NORM", 0.0))
+    grad_clip_norm = float(os.environ.get("GRAD_CLIP_NORM", 0.3))
 
     # Test-time training (LoRA) hyperparameters.
     skip_ttt = int(os.environ.get("SKIP_TTT", 0))
@@ -324,11 +326,16 @@ class Muon(torch.optim.Optimizer):
         momentum: float,
         backend_steps: int,
         nesterov: bool = True,
+        weight_decay: float = 0.0,
     ):
         super().__init__(
             params,
             dict(
-                lr=lr, momentum=momentum, backend_steps=backend_steps, nesterov=nesterov
+                lr=lr,
+                momentum=momentum,
+                backend_steps=backend_steps,
+                nesterov=nesterov,
+                weight_decay=weight_decay,
             ),
         )
 
@@ -351,6 +358,7 @@ class Muon(torch.optim.Optimizer):
             momentum = group["momentum"]
             backend_steps = group["backend_steps"]
             nesterov = group["nesterov"]
+            weight_decay = group["weight_decay"]
 
             total_params = sum(int(p.numel()) for p in params)
             updates_flat = torch.zeros(
@@ -380,6 +388,8 @@ class Muon(torch.optim.Optimizer):
             curr = 0
             for p in params:
                 g = updates_flat[curr : curr + p.numel()].view_as(p).to(dtype=p.dtype)
+                if weight_decay != 0:
+                    g.add_(p, alpha=weight_decay)
                 p.add_(g, alpha=-lr)
                 curr += p.numel()
 
@@ -1746,7 +1756,6 @@ def main() -> None:
         if p.ndim == 2
         and not any(pattern in name for pattern in CONTROL_TENSOR_NAME_PATTERNS)
     ]
-    matrix_params.extend(adapter_matrix_params)
     scalar_params = [
         p
         for name, p in block_named_params
@@ -1764,7 +1773,10 @@ def main() -> None:
         fused=True,
     )
     optimizer_muon = Muon(
-        matrix_params,
+        [
+            {"params": matrix_params, "weight_decay": 0.04},
+            {"params": adapter_matrix_params, "weight_decay": 0.0},
+        ],
         lr=args.matrix_lr,
         momentum=args.muon_momentum,
         backend_steps=args.muon_backend_steps,
