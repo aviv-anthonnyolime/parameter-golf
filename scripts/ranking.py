@@ -16,11 +16,15 @@ Usage:
     python scripts/ranking.py --wandb                         # fetch real curves from W&B, compare at min steps
     python scripts/ranking.py --wandb --target-steps 2000     # compare at step 2000 using W&B data
     python scripts/ranking.py --wandb --sort wb_bpb           # sort by W&B-interpolated bpb
+    python scripts/ranking.py --project-h100                  # project runs to 8xH100 (10 min)
+    python scripts/ranking.py --project-h100 --h100-time 600  # custom time budget
+    python scripts/ranking.py --project-h100 --speed-ratio 12.6  # custom speed ratio
 
 Sortable fields: val_bpb, val_bpb_int8, val_bpb_ttt, val_loss,
                  avg_ms_per_step, total_steps, compressed_size_mb,
                  proj_loss, proj_bpb  (only when --normalize is set)
                  wb_loss, wb_bpb     (only when --wandb is set)
+                 h100_steps, h100_ms  (only when --project-h100 is set)
 
 --wandb fetches the actual per-step val_loss curves from Weights & Biases and
 interpolates each run at a common step count — no scaling-law assumptions needed.
@@ -28,6 +32,9 @@ Requires `pip install wandb` and WANDB_API_KEY set (or `wandb login`).
 
 Normalization uses the power-law scaling: L_proj = L × (steps / target)^α
 This makes short runs comparable to long ones by extrapolating to a common horizon.
+
+--project-h100 estimates what each run would achieve on 8×H100 in the given time
+budget. Uses an empirical speed ratio derived from comparing A10G and H100 baselines.
 """
 
 import argparse
@@ -52,6 +59,7 @@ NUMERIC_FIELDS = [
     "val_loss", "avg_ms_per_step", "total_steps", "compressed_size_mb",
     "proj_loss", "proj_bpb",
     "wb_loss", "wb_bpb",
+    "h100_steps", "h100_ms", "h100_loss",
 ]
 
 DEFAULT_SORT = ["val_bpb_ttt", "val_bpb_int8", "val_bpb"]
@@ -70,6 +78,69 @@ def add_projected_scores(entries, target_steps, alpha):
         else:
             e["proj_loss"] = None
             e["proj_bpb"] = None
+
+
+def add_h100_projection(entries, speed_ratio, time_budget_s, alpha):
+    """
+    Project each run to 8×H100 by estimating ms/step on H100 and computing
+    how many steps would fit in the time budget.
+
+    Uses W&B curve interpolation (via _wb_val_pts) when available and in-range.
+    Falls back to power-law extrapolation (L_proj = L × (observed_steps / target_steps)^α).
+
+    NOTE: the default α=0.35 is a chinchilla-scale scaling law. For the 2-4×
+    extrapolation ranges typical here, the *empirical* α from baseline data is
+    ~0.06. Use --alpha 0.06 for conservative estimates.
+
+    Adds h100_ms, h100_steps, h100_loss, h100_bpb fields.
+    """
+    time_budget_ms = time_budget_s * 1000
+    extrapolation_ratios = []
+    for e in entries:
+        ms = e.get("avg_ms_per_step")
+        if ms is None or ms <= 0:
+            e["h100_ms"] = None
+            e["h100_steps"] = None
+            e["h100_loss"] = None
+            e["h100_bpb"] = None
+            continue
+
+        h100_ms = ms / speed_ratio
+        h100_steps = int(time_budget_ms / h100_ms)
+        e["h100_ms"] = round(h100_ms, 1)
+        e["h100_steps"] = h100_steps
+
+        # Try W&B curve interpolation first
+        pts = e.get("_wb_val_pts")
+        loss = None
+        if pts and len(pts) >= 2:
+            steps_list, loss_list = zip(*[(s, l) for s, l, *_ in pts])
+            loss = _interpolate(list(steps_list), list(loss_list), h100_steps)
+
+        # Fall back to power-law extrapolation
+        if loss is None:
+            obs_steps = e.get("total_steps") or 0
+            obs_loss = e.get("val_loss")
+            if obs_steps > 0 and obs_loss is not None:
+                if h100_steps <= obs_steps:
+                    loss = obs_loss  # within observed range, use final
+                else:
+                    loss = obs_loss * (obs_steps / h100_steps) ** alpha
+
+        e["h100_loss"] = loss
+        e["h100_bpb"] = loss * BPB_SCALE if loss is not None else None
+
+        obs_steps = e.get("total_steps") or 0
+        if obs_steps > 0 and h100_steps > obs_steps:
+            extrapolation_ratios.append(h100_steps / obs_steps)
+
+    if extrapolation_ratios:
+        avg_ratio = sum(extrapolation_ratios) / len(extrapolation_ratios)
+        if avg_ratio > 1.5:
+            print(f"  WARNING: avg extrapolation ratio is {avg_ratio:.1f}× beyond "
+                  f"observed data. α={alpha} may be too aggressive.")
+            print(f"  Empirical α from baseline: ~0.06. Try --alpha 0.06 for "
+                  f"conservative estimates.")
 
 
 def _interpolate(steps, values, target):
@@ -266,7 +337,8 @@ def apply_target_steps(entries, target_steps):
             e["total_steps"] = target_steps  # reflect the horizon we're comparing at
 
 
-def print_table(entries, sort_by=None, show_proj=False, show_wb=False, show_state=False):
+def print_table(entries, sort_by=None, show_proj=False, show_wb=False,
+                show_state=False, show_h100=False):
     if not entries:
         print("No results found.")
         return
@@ -291,6 +363,8 @@ def print_table(entries, sort_by=None, show_proj=False, show_wb=False, show_stat
         extra_cols += f" {'proj_loss':>10} {'proj_bpb':>9}"
     if show_wb:
         extra_cols += f" {'wb_loss':>8} {'wb_bpb':>8}"
+    if show_h100:
+        extra_cols += f" {'H100ms':>7} {'H100stp':>8} {'H100loss':>9}"
     hdr = (
         f"{'Rank':>4}  {'Docker Name':<20} {'Experiment':<12} "
         f"{'val_bpb':>8} {'bpb_int8':>9} {'bpb_ttt':>8} "
@@ -312,6 +386,14 @@ def print_table(entries, sort_by=None, show_proj=False, show_wb=False, show_stat
         if show_wb:
             wl, wb = e.get("wb_loss"), e.get("wb_bpb")
             extra_str += f" {wl:>8.4f} {wb:>8.4f}" if wl is not None else f" {'N/A':>8} {'N/A':>8}"
+        if show_h100:
+            hms = e.get("h100_ms")
+            hstp = e.get("h100_steps")
+            hloss = e.get("h100_loss")
+            hms_s = f"{hms:>7.1f}" if hms is not None else f"{'N/A':>7}"
+            hstp_s = f"{hstp:>8}" if hstp is not None else f"{'N/A':>8}"
+            hloss_s = f"{hloss:>9.4f}" if hloss is not None else f"{'N/A':>9}"
+            extra_str += f" {hms_s} {hstp_s} {hloss_s}"
         print(
             f"{i:>4}  {e.get('docker_name', '?'):<20} {e.get('experiment', '?'):<12} "
             f"{e.get('val_bpb') or 0:>8.4f} {e.get('val_bpb_int8') or 0:>9.4f} {e.get('val_bpb_ttt') or 0:>8.4f} "
@@ -322,6 +404,8 @@ def print_table(entries, sort_by=None, show_proj=False, show_wb=False, show_stat
     print(sep)
     if show_state:
         print("  S column: ' '=finished  '!'=crashed  '~'=running")
+    if show_h100:
+        print("  H100 columns: projected ms/step, steps in time budget, projected val_loss")
     print(f"  Total runs: {len(entries)}\n")
 
 
@@ -486,6 +570,20 @@ def main():
              "With --from-wandb: default is min steps seen. "
              "With --wandb: default is min total_steps in JSONL.",
     )
+    parser.add_argument(
+        "--project-h100", action="store_true",
+        help="Project all runs to 8×H100 performance. Shows estimated ms/step, "
+             "steps achievable in the time budget, and projected val_loss.",
+    )
+    parser.add_argument(
+        "--speed-ratio", type=float, default=12.6, metavar="FLOAT",
+        help="Speed ratio between current hardware and 8×H100 (default: 12.6, "
+             "derived from 4×A10G baseline 548.5ms vs 8×H100 baseline 43.54ms).",
+    )
+    parser.add_argument(
+        "--h100-time", type=int, default=600, metavar="SECONDS",
+        help="Time budget in seconds for H100 projection (default: 600 = 10 min).",
+    )
     args = parser.parse_args()
 
     if args.sort:
@@ -517,8 +615,16 @@ def main():
             target = max(all_steps) if args.normalize == -1 else args.normalize
             add_projected_scores(entries, target_steps=target, alpha=args.alpha)
 
-        sort_by = args.sort or ["val_bpb"]
-        print_table(entries, sort_by=sort_by, show_proj=show_proj, show_state=True)
+        show_h100 = args.project_h100
+        if show_h100:
+            print(f"  H100 projection: speed_ratio={args.speed_ratio}x, "
+                  f"time_budget={args.h100_time}s")
+            add_h100_projection(entries, args.speed_ratio, args.h100_time,
+                                args.alpha)
+
+        sort_by = args.sort or (["h100_loss"] if show_h100 else ["val_bpb"])
+        print_table(entries, sort_by=sort_by, show_proj=show_proj,
+                    show_state=True, show_h100=show_h100)
 
     else:
         # JSONL-primary path (original behavior)
@@ -552,14 +658,24 @@ def main():
             print(f"\n  W&B comparison at step {target_steps} (interpolated from real curves)")
             add_wandb_scores(entries, target_steps=target_steps)
 
+        show_h100 = args.project_h100
+        if show_h100:
+            print(f"\n  H100 projection: speed_ratio={args.speed_ratio}x, "
+                  f"time_budget={args.h100_time}s")
+            add_h100_projection(entries, args.speed_ratio, args.h100_time,
+                                args.alpha)
+
         sort_by = args.sort
         if sort_by is None:
-            if show_wb:
+            if show_h100:
+                sort_by = ["h100_loss"]
+            elif show_wb:
                 sort_by = ["wb_bpb"]
             elif show_proj:
                 sort_by = ["proj_bpb"]
 
-        print_table(entries, sort_by=sort_by, show_proj=show_proj, show_wb=show_wb)
+        print_table(entries, sort_by=sort_by, show_proj=show_proj,
+                    show_wb=show_wb, show_h100=show_h100)
 
     if args.chart:
         print("Generating charts...")
