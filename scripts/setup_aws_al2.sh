@@ -46,25 +46,29 @@ fi
 source "$VENV_DIR/bin/activate"
 echo "  Active Python: $(python --version)"
 
-# ── 3. Modern CMake via pip ───────────────────────────────────────────────────
-echo "[3/5] Installing a modern CMake via pip (system cmake 2.8 is too old)..."
+# ── 3. Upgrade pip itself first to avoid old pip not understanding modern package metadata ─────────────────────────────────
+echo "[3/5] Upgrading pip itself..."
+pip install --upgrade pip
+
+# ── 4. Modern CMake via pip ───────────────────────────────────────────────────
+echo "[4/5] Installing a modern CMake via pip (system cmake 2.8 is too old)..."
 pip install --quiet --cache-dir /tmp/pip-cache cmake
 export PATH="$(python -c 'import cmake; import os; print(os.path.dirname(cmake.__file__))')/data/bin:$PATH"
 echo "  cmake = $(cmake --version | head -1)"
 
-# ── 4. Python dependencies ────────────────────────────────────────────────────
+# ── 5. Python dependencies ────────────────────────────────────────────────────
 if [ "$SKIP_INSTALL" != "--skip-install" ]; then
-    echo "[4/5] Installing Python dependencies (cache → /tmp/pip-cache)..."
+    echo "[5/6] Installing Python dependencies (cache → /tmp/pip-cache)..."
     pip install --cache-dir /tmp/pip-cache -r requirements.txt
 else
-    echo "[4/5] Skipping pip install (--skip-install passed)."
+    echo "[5/6] Skipping pip install (--skip-install passed)."
 fi
 
-# ── 5. Data symlinks → root filesystem ───────────────────────────────────────
+# ── 6. Data symlinks → root filesystem ───────────────────────────────────────
 # The download script and train_gpt.py both default to ./data/datasets and
 # ./data/tokenizers. We redirect those to /opt/pg-data via symlinks so the
 # large binary files never touch the small SageMaker volume. No code changes.
-echo "[5/5] Setting up data symlinks (actual data stored at $DATA_STORE)..."
+echo "[6/6] Setting up data symlinks (actual data stored at $DATA_STORE)..."
 mkdir -p "$DATA_STORE/datasets" "$DATA_STORE/tokenizers"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
