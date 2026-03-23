@@ -39,30 +39,144 @@ except ImportError:
 
 # Docker-style name generator (inline to avoid import path issues with torchrun)
 _NAME_ADJECTIVES = [
-    "agile", "bold", "brave", "bright", "calm", "clever", "cool", "cosmic",
-    "crisp", "dark", "deep", "eager", "epic", "fair", "fast", "fierce",
-    "fleet", "frosty", "gentle", "grand", "happy", "hardy", "keen", "kind",
-    "lively", "lucky", "merry", "mighty", "noble", "plucky", "proud", "quick",
-    "quiet", "rapid", "rustic", "sharp", "shiny", "silent", "sleek", "smooth",
-    "snappy", "solar", "solid", "spicy", "stark", "steady", "stoic", "strong",
-    "super", "swift", "tidy", "tough", "vivid", "warm", "wild", "wise",
-    "witty", "zany", "zen", "zippy",
+    "agile",
+    "bold",
+    "brave",
+    "bright",
+    "calm",
+    "clever",
+    "cool",
+    "cosmic",
+    "crisp",
+    "dark",
+    "deep",
+    "eager",
+    "epic",
+    "fair",
+    "fast",
+    "fierce",
+    "fleet",
+    "frosty",
+    "gentle",
+    "grand",
+    "happy",
+    "hardy",
+    "keen",
+    "kind",
+    "lively",
+    "lucky",
+    "merry",
+    "mighty",
+    "noble",
+    "plucky",
+    "proud",
+    "quick",
+    "quiet",
+    "rapid",
+    "rustic",
+    "sharp",
+    "shiny",
+    "silent",
+    "sleek",
+    "smooth",
+    "snappy",
+    "solar",
+    "solid",
+    "spicy",
+    "stark",
+    "steady",
+    "stoic",
+    "strong",
+    "super",
+    "swift",
+    "tidy",
+    "tough",
+    "vivid",
+    "warm",
+    "wild",
+    "wise",
+    "witty",
+    "zany",
+    "zen",
+    "zippy",
 ]
 _NAME_ANIMALS = [
-    "alpaca", "badger", "bear", "bison", "cobra", "condor", "crane", "crow",
-    "deer", "dingo", "eagle", "egret", "elk", "falcon", "ferret", "finch",
-    "fox", "gecko", "goose", "gorilla", "hawk", "heron", "horse", "husky",
-    "ibis", "iguana", "impala", "jackal", "jaguar", "jay", "kite", "koala",
-    "lark", "lemur", "lion", "llama", "lynx", "macaw", "mink", "moose",
-    "newt", "okapi", "orca", "osprey", "otter", "owl", "panda", "parrot",
-    "puma", "quail", "raven", "robin", "salmon", "seal", "shark", "sloth",
-    "snake", "squid", "stork", "swan", "tiger", "toucan", "trout", "viper",
-    "whale", "wolf", "wren", "yak", "zebra", "zorilla",
+    "alpaca",
+    "badger",
+    "bear",
+    "bison",
+    "cobra",
+    "condor",
+    "crane",
+    "crow",
+    "deer",
+    "dingo",
+    "eagle",
+    "egret",
+    "elk",
+    "falcon",
+    "ferret",
+    "finch",
+    "fox",
+    "gecko",
+    "goose",
+    "gorilla",
+    "hawk",
+    "heron",
+    "horse",
+    "husky",
+    "ibis",
+    "iguana",
+    "impala",
+    "jackal",
+    "jaguar",
+    "jay",
+    "kite",
+    "koala",
+    "lark",
+    "lemur",
+    "lion",
+    "llama",
+    "lynx",
+    "macaw",
+    "mink",
+    "moose",
+    "newt",
+    "okapi",
+    "orca",
+    "osprey",
+    "otter",
+    "owl",
+    "panda",
+    "parrot",
+    "puma",
+    "quail",
+    "raven",
+    "robin",
+    "salmon",
+    "seal",
+    "shark",
+    "sloth",
+    "snake",
+    "squid",
+    "stork",
+    "swan",
+    "tiger",
+    "toucan",
+    "trout",
+    "viper",
+    "whale",
+    "wolf",
+    "wren",
+    "yak",
+    "zebra",
+    "zorilla",
 ]
 
 
 def _generate_docker_name(seed=None):
     import hashlib
+
     if isinstance(seed, str):
         seed = int(hashlib.sha256(seed.encode()).hexdigest(), 16)
     rng = random.Random(seed)
@@ -77,6 +191,7 @@ def _experiment_name():
     """Derive experiment folder name from script path (e.g. 'phase1_UT')."""
     script_dir = Path(__file__).resolve().parent.name
     return script_dir
+
 
 # -----------------------------
 # HYPERPARAMETERS
@@ -135,6 +250,14 @@ class Hyperparameters:
     tie_embeddings = bool(int(os.environ.get("TIE_EMBEDDINGS", "1")))
     rope_base = float(os.environ.get("ROPE_BASE", 10000.0))
     logit_softcap = float(os.environ.get("LOGIT_SOFTCAP", 30.0))
+
+    # Adapters and low-rank updates.
+    adapter_rank = int(os.environ.get("ADAPTER_RANK", 16))
+    adapter_alpha = float(os.environ.get("ADAPTER_ALPHA", 16.0))
+    adapter_method = os.environ.get("ADAPTER_METHOD", "").lower()
+    adapter_location = os.environ.get(
+        "ADAPTER_LOCATION", "all"
+    ).lower()  # "all", "ffn", "qv-attn","qkvo-attn", "qv-attn-ffn"
 
     # Optimizer hyperparameters.
     embed_lr = float(os.environ.get("EMBED_LR", 0.6))
@@ -727,11 +850,28 @@ class CausalSelfAttention(nn.Module):
         )
         self.rotary = Rotary(self.head_dim, base=rope_base)
 
-    def forward(self, x: Tensor, q_delta=None, v_delta=None) -> Tensor:
+    def forward(
+        self,
+        x: Tensor,
+        q_delta=None,
+        v_delta=None,
+        q_adapter_delta=None,
+        k_adapter_delta=None,
+        v_adapter_delta=None,
+        o_adapter=None,
+    ) -> Tensor:
         bsz, seqlen, dim = x.shape
-        q = self.c_q(x) + (q_delta if q_delta is not None else 0)
-        k = self.c_k(x)
-        v = self.c_v(x) + (v_delta if v_delta is not None else 0)
+        q = (
+            self.c_q(x)
+            + (q_delta if q_delta is not None else 0)
+            + (q_adapter_delta if q_adapter_delta is not None else 0)
+        )
+        k = self.c_k(x) + (k_adapter_delta if k_adapter_delta is not None else 0)
+        v = (
+            self.c_v(x)
+            + (v_delta if v_delta is not None else 0)
+            + (v_adapter_delta if v_adapter_delta is not None else 0)
+        )
         q = q.reshape(bsz, seqlen, self.num_heads, self.head_dim).transpose(1, 2)
         k = k.reshape(bsz, seqlen, self.num_kv_heads, self.head_dim).transpose(1, 2)
         v = v.reshape(bsz, seqlen, self.num_kv_heads, self.head_dim).transpose(1, 2)
@@ -750,7 +890,7 @@ class CausalSelfAttention(nn.Module):
             enable_gqa=(self.num_kv_heads != self.num_heads),
         )
         y = y.transpose(1, 2).contiguous().reshape(bsz, seqlen, dim)
-        return self.proj(y)
+        return self.proj(y) + (o_adapter(y) if o_adapter is not None else 0)
 
 
 class MLP(nn.Module):
@@ -762,9 +902,12 @@ class MLP(nn.Module):
         self.proj = CastedLinear(hidden, dim, bias=False)
         self.proj._zero_init = True
 
-    def forward(self, x: Tensor) -> Tensor:
-        x = torch.relu(self.fc(x))
-        return self.proj(x.square())
+    def forward(self, x: Tensor, mlp_fc_adapter=None, mlp_proj_adapter=None) -> Tensor:
+        x = self.fc(x) + (mlp_fc_adapter(x) if mlp_fc_adapter is not None else 0)
+        x = torch.relu(x).square()
+        return self.proj(x) + (
+            mlp_proj_adapter(x) if mlp_proj_adapter is not None else 0
+        )
 
 
 class Block(nn.Module):
@@ -791,19 +934,56 @@ class Block(nn.Module):
         )
 
     def forward(
-        self, x: Tensor, x0: Tensor, q_delta_fn=None, v_delta_fn=None
+        self,
+        x: Tensor,
+        x0: Tensor,
+        q_delta_fn=None,
+        v_delta_fn=None,
+        q_adapter=None,
+        k_adapter=None,
+        v_adapter=None,
+        o_adapter=None,
+        mlp_fc_adapter=None,
+        mlp_proj_adapter=None,
     ) -> Tensor:
         mix = self.resid_mix.to(dtype=x.dtype)
         x = mix[0][None, None, :] * x + mix[1][None, None, :] * x0
         n = self.attn_norm(x)
         qd = q_delta_fn(n) if q_delta_fn is not None else None
         vd = v_delta_fn(n) if v_delta_fn is not None else None
-        attn_out = self.attn(n, qd, vd)
+        q_adapter_ = q_adapter(n) if q_adapter is not None else None
+        k_adapter_ = k_adapter(n) if k_adapter is not None else None
+        v_adapter_ = v_adapter(n) if v_adapter is not None else None
+
+        attn_out = self.attn(n, qd, vd, q_adapter_, k_adapter_, v_adapter_, o_adapter)
         x = x + self.attn_scale.to(dtype=x.dtype)[None, None, :] * attn_out
         x = x + self.mlp_scale.to(dtype=x.dtype)[None, None, :] * self.mlp(
-            self.mlp_norm(x)
+            self.mlp_norm(x), mlp_fc_adapter, mlp_proj_adapter
         )
         return x
+
+
+class AdapterLoRA(nn.Module):
+    """LoRA adapeter test"""
+
+    def __init__(self, input_dim: int, output_dim: int, rank: int, alpha: int):
+        super().__init__()
+        self.rank = rank
+        self.alpha = alpha
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.A = CastedLinear(input_dim, rank)
+        self.B = CastedLinear(rank, output_dim)
+        self.reset()
+
+    def reset(self) -> None:
+        bound = 1.0 / math.sqrt(self.input_dim)
+        with torch.no_grad():
+            self.A.weight.uniform_(-bound, bound)  # kaiming-uniform
+            self.B.weight.zero_()
+
+    def forward(self, x: Tensor) -> Tensor:
+        return (self.alpha / self.rank) * self.B(self.A(x))
 
 
 class GPT(nn.Module):
@@ -821,6 +1001,10 @@ class GPT(nn.Module):
         logit_softcap: float,
         rope_base: float,
         qk_gain_init: float,
+        adapter_rank: int = 16,
+        adapter_alpha: int = 16,
+        adapter_location: str = "all",
+        adapter_method: str = "lora",
     ):
         super().__init__()
         if logit_softcap <= 0.0:
@@ -861,6 +1045,79 @@ class GPT(nn.Module):
         )
         if self.lm_head is not None:
             self.lm_head._zero_init = True
+        self.adapter_enabled = adapter_method in {
+            "lora",
+            "noble",
+            "dora",
+            "mora",
+            "loha",
+            "adalora",
+            "vera",
+        }
+        self.adapter_method = (
+            AdapterLoRA if self.adapter_enabled and adapter_method == "lora" else None
+        )
+        # "all", "ffn", "qv-attn","qkvo-attn", "qv-attn-ffn"
+        self.adapter_location_qv = adapter_location in {
+            "all",
+            "qv-attn",
+            "qv-attn-ffn",
+            "qkvo-attn",
+        }
+        self.adapter_location_ko = adapter_location in {"all", "qkvo-attn"}
+        self.adapter_location_mlp = adapter_location in {
+            "all",
+            "ffn",
+            "qv-attn-ffn",
+        }
+        if self.adapter_enabled:
+            # Attention lora
+            if self.adapter_location_qv:
+                self.q_adapter = nn.ModuleList()
+                self.v_adapter = nn.ModuleList()
+            if self.adapter_location_ko:
+                self.k_adapter = nn.ModuleList()
+                self.o_adapter = nn.ModuleList()
+            # MLP lora
+            if self.adapter_location_mlp:
+                self.mlp_fc_adapter = nn.ModuleList()
+                self.mlp_proj_adapter = nn.ModuleList()
+            kv_dim = num_kv_heads * (model_dim // num_heads)
+
+            for _ in range(self.num_encoder_layers + self.num_decoder_layers):
+                if self.adapter_location_qv:
+                    self.q_adapter.append(
+                        self.adapter_method(
+                            model_dim, model_dim, adapter_rank, adapter_alpha
+                        )
+                    )
+                    self.v_adapter.append(
+                        self.adapter_method(
+                            model_dim, kv_dim, adapter_rank, adapter_alpha
+                        )
+                    )
+                if self.adapter_location_ko:
+                    self.k_adapter.append(
+                        self.adapter_method(
+                            model_dim, kv_dim, adapter_rank, adapter_alpha
+                        )
+                    )
+                    self.o_adapter.append(
+                        self.adapter_method(
+                            model_dim, model_dim, adapter_rank, adapter_alpha
+                        )
+                    )
+                if self.adapter_location_mlp:
+                    self.mlp_fc_adapter.append(
+                        self.adapter_method(
+                            model_dim, model_dim * mlp_mult, adapter_rank, adapter_alpha
+                        )
+                    )
+                    self.mlp_proj_adapter.append(
+                        self.adapter_method(
+                            model_dim * mlp_mult, model_dim, adapter_rank, adapter_alpha
+                        )
+                    )
         self._init_weights()
 
     def _init_weights(self) -> None:
@@ -880,8 +1137,50 @@ class GPT(nn.Module):
         for i in range(self.num_encoder_layers):
             qd = lora.q_loras[i] if lora else None
             vd = lora.v_loras[i] if lora else None
+
+            q_adapter_ = (
+                self.q_adapter[i]
+                if self.adapter_enabled and self.adapter_location_qv
+                else None
+            )
+            k_adapter_ = (
+                self.k_adapter[i]
+                if self.adapter_enabled and self.adapter_location_ko
+                else None
+            )
+            v_adapter_ = (
+                self.v_adapter[i]
+                if self.adapter_enabled and self.adapter_location_qv
+                else None
+            )
+            o_adapter_ = (
+                self.o_adapter[i]
+                if self.adapter_enabled and self.adapter_location_ko
+                else None
+            )
+            mlp_fc_adapter_ = (
+                self.mlp_fc_adapter[i]
+                if self.adapter_enabled and self.adapter_location_mlp
+                else None
+            )
+            mlp_proj_adapter_ = (
+                self.mlp_proj_adapter[i]
+                if self.adapter_enabled and self.adapter_location_mlp
+                else None
+            )
             x = x + self.depth_embed.weight[i].to(dtype=x.dtype)[None, None, :]
-            x = self.blocks[i % self.num_unique_layers](x, x0, qd, vd)
+            x = self.blocks[i % self.num_unique_layers](
+                x,
+                x0,
+                qd,
+                vd,
+                q_adapter_,
+                k_adapter_,
+                v_adapter_,
+                o_adapter_,
+                mlp_fc_adapter_,
+                mlp_proj_adapter_,
+            )
             skips.append(x)
         for i in range(self.num_decoder_layers):
             bi = self.num_encoder_layers + i
@@ -894,7 +1193,48 @@ class GPT(nn.Module):
                 )
             qd = lora.q_loras[bi] if lora else None
             vd = lora.v_loras[bi] if lora else None
-            x = self.blocks[bi % self.num_unique_layers](x, x0, qd, vd)
+            q_adapter_ = (
+                self.q_adapter[bi]
+                if self.adapter_enabled and self.adapter_location_qv
+                else None
+            )
+            k_adapter_ = (
+                self.k_adapter[bi]
+                if self.adapter_enabled and self.adapter_location_ko
+                else None
+            )
+            v_adapter_ = (
+                self.v_adapter[bi]
+                if self.adapter_enabled and self.adapter_location_qv
+                else None
+            )
+            o_adapter_ = (
+                self.o_adapter[bi]
+                if self.adapter_enabled and self.adapter_location_ko
+                else None
+            )
+            mlp_fc_adapter_ = (
+                self.mlp_fc_adapter[bi]
+                if self.adapter_enabled and self.adapter_location_mlp
+                else None
+            )
+            mlp_proj_adapter_ = (
+                self.mlp_proj_adapter[bi]
+                if self.adapter_enabled and self.adapter_location_mlp
+                else None
+            )
+            x = self.blocks[bi % self.num_unique_layers](
+                x,
+                x0,
+                qd,
+                vd,
+                q_adapter_,
+                k_adapter_,
+                v_adapter_,
+                o_adapter_,
+                mlp_fc_adapter_,
+                mlp_proj_adapter_,
+            )
         x = self.final_norm(x)
         if self.tie_embeddings:
             logits = F.linear(x, self.tok_emb.weight)
@@ -1262,7 +1602,9 @@ def main() -> None:
     if master_process and args.wandb_enabled and _WANDB_AVAILABLE:
         if args.wandb_api_key:
             wandb.login(key=args.wandb_api_key)
-        hp_dict = {k: v for k, v in vars(args.__class__).items() if not k.startswith("_")}
+        hp_dict = {
+            k: v for k, v in vars(args.__class__).items() if not k.startswith("_")
+        }
         wandb_run = wandb.init(
             entity=args.wandb_entity,
             project=args.wandb_project,
@@ -1346,6 +1688,10 @@ def main() -> None:
             logit_softcap=args.logit_softcap,
             rope_base=args.rope_base,
             qk_gain_init=args.qk_gain_init,
+            adapter_rank=args.adapter_rank,
+            adapter_alpha=args.adapter_alpha,
+            adapter_location=args.adapter_location,
+            adapter_method=args.adapter_method,
         )
         .to(device)
         .bfloat16()
@@ -1369,18 +1715,41 @@ def main() -> None:
     # - matrix params in transformer blocks use MATRIX_LR via Muon
     # - vectors/scalars use SCALAR_LR via Adam
     block_named_params = list(base_model.blocks.named_parameters())
+    # After building block_named_params, also collect adapter params
+    adapter_matrix_params = []
+    adapter_scalar_params = []
+    for attr_name in (
+        "q_adapter",
+        "k_adapter",
+        "v_adapter",
+        "o_adapter",
+        "mlp_fc_adapter",
+        "mlp_proj_adapter",
+    ):
+        module_list = getattr(base_model, attr_name, None)
+        if module_list is not None:
+            for adapter in module_list:
+                if adapter is not None:
+                    for p in adapter.parameters():
+                        if p.ndim == 2:
+                            adapter_matrix_params.append(p)
+                        elif p.ndim < 2:
+                            adapter_scalar_params.append(p)
+
     matrix_params = [
         p
         for name, p in block_named_params
         if p.ndim == 2
         and not any(pattern in name for pattern in CONTROL_TENSOR_NAME_PATTERNS)
     ]
+    matrix_params.extend(adapter_matrix_params)
     scalar_params = [
         p
         for name, p in block_named_params
         if p.ndim < 2
         or any(pattern in name for pattern in CONTROL_TENSOR_NAME_PATTERNS)
     ]
+    scalar_params.extend(adapter_scalar_params)
     if base_model.skip_weights.numel() > 0:
         scalar_params.append(base_model.skip_weights)
     token_lr = args.tied_embed_lr if args.tie_embeddings else args.embed_lr
@@ -1623,7 +1992,10 @@ def main() -> None:
                 f"train_time:{approx_training_time_ms:.0f}ms step_avg:{step_avg_ms:.2f}ms"
             )
             if wandb_run is not None:
-                wandb_run.log({"train_loss": tl, "step_avg_ms": step_avg_ms, "lr_scale": scale}, step=step)
+                wandb_run.log(
+                    {"train_loss": tl, "step_avg_ms": step_avg_ms, "lr_scale": scale},
+                    step=step,
+                )
 
         # Needed to sync whether we've reached the wallclock cap.
         reached_cap = (
@@ -1746,8 +2118,12 @@ def main() -> None:
             "val_bpb": round(float(val_bpb), 6),
             "val_loss_int8": round(float(q_val_loss), 6),
             "val_bpb_int8": round(float(q_val_bpb), 6),
-            "val_loss_ttt": round(float(ttt_val_loss), 6) if ttt_val_loss is not None else None,
-            "val_bpb_ttt": round(float(ttt_val_bpb), 6) if ttt_val_bpb is not None else None,
+            "val_loss_ttt": (
+                round(float(ttt_val_loss), 6) if ttt_val_loss is not None else None
+            ),
+            "val_bpb_ttt": (
+                round(float(ttt_val_bpb), 6) if ttt_val_bpb is not None else None
+            ),
             "compressed_size_bytes": quant_file_bytes,
             "compressed_size_mb": round(quant_file_bytes / 1024**2, 2),
             "peak_memory_mib": torch.cuda.max_memory_allocated() // 1024 // 1024,
@@ -1766,7 +2142,9 @@ def main() -> None:
         log0(f"results_saved: {exp_results}")
 
         # Global results file
-        global_results = Path(__file__).resolve().parent.parent.parent / "results" / "all_runs.jsonl"
+        global_results = (
+            Path(__file__).resolve().parent.parent.parent / "results" / "all_runs.jsonl"
+        )
         global_results.parent.mkdir(parents=True, exist_ok=True)
         with open(global_results, "a", encoding="utf-8") as f:
             f.write(result_line + "\n")
@@ -1774,15 +2152,17 @@ def main() -> None:
 
     # --- W&B summary + finish ---
     if wandb_run is not None:
-        wandb_run.summary.update({
-            "final_val_loss": float(val_loss),
-            "final_val_bpb": float(val_bpb),
-            "final_val_bpb_int8": float(q_val_bpb),
-            "final_val_bpb_ttt": float(ttt_val_bpb),
-            "total_steps": step,
-            "avg_ms_per_step": round(training_time_ms / max(step, 1), 2),
-            "compressed_size_mb": round(quant_file_bytes / 1024**2, 2),
-        })
+        wandb_run.summary.update(
+            {
+                "final_val_loss": float(val_loss),
+                "final_val_bpb": float(val_bpb),
+                "final_val_bpb_int8": float(q_val_bpb),
+                "final_val_bpb_ttt": float(ttt_val_bpb),
+                "total_steps": step,
+                "avg_ms_per_step": round(training_time_ms / max(step, 1), 2),
+                "compressed_size_mb": round(quant_file_bytes / 1024**2, 2),
+            }
+        )
         wandb_run.finish()
 
     if distributed:

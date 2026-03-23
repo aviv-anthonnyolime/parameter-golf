@@ -1775,10 +1775,10 @@ def main() -> None:
     # --- W&B summary + finish ---
     if wandb_run is not None:
         wandb_run.summary.update({
-            "final_val_loss": float(val_loss),
-            "final_val_bpb": float(val_bpb),
-            "final_val_bpb_int8": float(q_val_bpb),
-            "final_val_bpb_ttt": float(ttt_val_bpb),
+            "final_val_loss": float(val_loss) if val_loss is not None else None,
+            "final_val_bpb": float(val_bpb) if val_bpb is not None else None,
+            "final_val_bpb_int8": float(q_val_bpb) if q_val_bpb is not None else None,
+            "final_val_bpb_ttt": float(ttt_val_bpb) if ttt_val_bpb is not None else None,
             "total_steps": step,
             "avg_ms_per_step": round(training_time_ms / max(step, 1), 2),
             "compressed_size_mb": round(quant_file_bytes / 1024**2, 2),

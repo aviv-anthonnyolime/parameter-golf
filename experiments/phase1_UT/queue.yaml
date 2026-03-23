@@ -18,6 +18,7 @@ defaults:
   # 10L-5U-512d ≈ 3452 steps @ 579ms/step → 690 warmdown steps ≈ 400s
   # LR stays at peak until ~1600s, then linearly decays to 0.
   WARMDOWN_ITERS: "690"
+  TRAIN_SEQ_LEN : "2048"
 
 runs:
   # Baseline: 10L-1U-512d

@@ -1,0 +1,90 @@
+# Phase 2 — Overnight longer runs for promising PEFT configs
+# Usage: python scripts/run_queue.py experiments/phase2_PEFT/queue_overnight.yaml
+#
+# 1-hour runs (3600s) for configs that showed promise in 20min screening.
+# Run after reviewing queue.yaml screening results.
+
+script: experiments/phase2_PEFT/train_gpt_peft.py
+nproc: 4
+
+defaults:
+  DATA_PATH: ./data/datasets/fineweb10B_sp1024
+  TOKENIZER_PATH: ./data/tokenizers/fineweb_1024_bpe.model
+  VOCAB_SIZE: "1024"
+  MAX_WALLCLOCK_SECONDS: "3600"   # 1 hour per run
+  TRAIN_LOG_EVERY: "10"
+  WANDB_ENABLED: "1"
+  WANDB_PROJECT: Openai-challenge-parameter-golf
+  GRAD_ACCUM_STEPS: "2"
+  # Base UT config
+  NUM_LAYERS: "10"
+  NUM_UNIQUE_LAYERS: "1"
+  MODEL_DIM: "512"
+  MLP_MULT: "2"
+  NUM_HEADS: "8"
+  NUM_KV_HEADS: "4"
+  TRAIN_SEQ_LEN: "2048"
+  # Warmdown: ~20% of steps for 1h run
+  # 10L-1U-512d ≈ ~600ms/step → ~6000 steps/hr → 1200 warmdown
+  WARMDOWN_ITERS: "1200"
+  # PEFT defaults
+  ADAPTER_METHOD: "lora"
+  ADAPTER_ALPHA: "128"
+  ADAPTER_RANK: "128"
+  ADAPTER_LOCATION: "qv-attn"
+
+runs:
+  # --- Rank sweep (1h, 3 seeds each for the top-2 from screening) ---
+  - RUN_ID: peft_lora_r128_qv_s1337
+    ADAPTER_RANK: "128"
+    SEED: "1337"
+
+  - RUN_ID: peft_lora_r128_qv_s42
+    ADAPTER_RANK: "128"
+    SEED: "42"
+
+  - RUN_ID: peft_lora_r128_qv_s7
+    ADAPTER_RANK: "128"
+    SEED: "7"
+
+  - RUN_ID: peft_lora_r256_qv_s1337
+    ADAPTER_RANK: "256"
+    ADAPTER_ALPHA: "256"
+    SEED: "1337"
+
+  - RUN_ID: peft_lora_r256_qv_s42
+    ADAPTER_RANK: "256"
+    ADAPTER_ALPHA: "256"
+    SEED: "42"
+
+  - RUN_ID: peft_lora_r256_qv_s7
+    ADAPTER_RANK: "256"
+    ADAPTER_ALPHA: "256"
+    SEED: "7"
+
+  # --- Best location from screening (1h, 3 seeds) ---
+  # Update ADAPTER_LOCATION after reviewing screening results
+  # - RUN_ID: peft_lora_r128_best_loc_s1337
+  #   ADAPTER_LOCATION: "qv-attn-ffn"
+  #   SEED: "1337"
+
+  # - RUN_ID: peft_lora_r128_best_loc_s42
+  #   ADAPTER_LOCATION: "qv-attn-ffn"
+  #   SEED: "42"
+
+  # - RUN_ID: peft_lora_r128_best_loc_s7
+  #   ADAPTER_LOCATION: "qv-attn-ffn"
+  #   SEED: "7"
+
+  # --- Best alternative method from screening (1h, 3 seeds) ---
+  # - RUN_ID: peft_best_method_s1337
+  #   ADAPTER_METHOD: "dora"
+  #   SEED: "1337"
+
+  # - RUN_ID: peft_best_method_s42
+  #   ADAPTER_METHOD: "dora"
+  #   SEED: "42"
+
+  # - RUN_ID: peft_best_method_s7
+  #   ADAPTER_METHOD: "dora"
+  #   SEED: "7"

@@ -1,7 +1,7 @@
 # Phase 2 — Per-step PEFT adapters on UT
 # Usage: python scripts/run_queue.py experiments/phase2_PEFT/queue.yaml
 #
-# Base: 10L-5U-512d (Phase 1 best speed/quality trade-off)
+# Base: 10L-1U-512d (extreme sharing — adapters differentiate steps)
 # Warmdown ENABLED (Phase 1 runs lacked it — unfair vs baseline)
 
 script: experiments/phase2_PEFT/train_gpt_peft.py
@@ -18,52 +18,71 @@ defaults:
   GRAD_ACCUM_STEPS: "2"
   # Base UT config
   NUM_LAYERS: "10"
-  NUM_UNIQUE_LAYERS: "5"
+  NUM_UNIQUE_LAYERS: "1"
   MODEL_DIM: "512"
   MLP_MULT: "2"
   NUM_HEADS: "8"
   NUM_KV_HEADS: "4"
+  TRAIN_SEQ_LEN: "1024"
   # Warmdown: ~20% of total steps for a 1200s run
-  # 10L-5U-512d ≈ 2000 steps @ ~600ms/step (PEFT overhead) → 400 warmdown steps ≈ 240s
-  # LR stays at peak until ~960s, then linearly decays to 0.
-  # NOTE: do NOT use the base-script default of 1200 here — that would put 58% of
-  #       a 1200s run in warmdown (695s), killing useful learning time.
   WARMDOWN_ITERS: "400"
   # PEFT defaults
-  PEFT_METHOD: "lora"
-  PEFT_RANK: "8"
+  ADAPTER_METHOD: "lora"
+  ADAPTER_RANK: "16"
+  ADAPTER_ALPHA: "16"
+  ADAPTER_LOCATION: "qv-attn"
 
 runs:
-  # --- Step 1: LoRA rank sweep ---
-  - RUN_ID: peft_lora_r4
-    PEFT_RANK: "4"
-    PEFT_METHOD: "lora"
+  # --- Step 1: LoRA rank sweep (qv-attn, cheapest location) ---
+  - RUN_ID: peft_lora_r16_qv
+    ADAPTER_RANK: "16"
+    ADAPTER_ALPHA: "16"
 
-  - RUN_ID: peft_lora_r8
-    PEFT_RANK: "8"
-    PEFT_METHOD: "lora"
+  - RUN_ID: peft_lora_r128_qv
+    ADAPTER_RANK: "128"
+    ADAPTER_ALPHA: "128"
 
-  - RUN_ID: peft_lora_r16
-    PEFT_RANK: "16"
-    PEFT_METHOD: "lora"
+  - RUN_ID: peft_lora_r256_qv
+    ADAPTER_RANK: "256"
+    ADAPTER_ALPHA: "256"
 
-  # --- Step 2: Method comparison at rank 8 ---
+  # --- Step 2: Location ablation at best rank (start with r128) ---
+  - RUN_ID: peft_lora_r128_qv_ffn
+    ADAPTER_RANK: "128"
+    ADAPTER_ALPHA: "128"
+    ADAPTER_LOCATION: "qv-attn-ffn"
+
+  - RUN_ID: peft_lora_r128_all
+    ADAPTER_RANK: "128"
+    ADAPTER_ALPHA: "128"
+    ADAPTER_LOCATION: "all"
+  
+  # --- Test with TrainSeqLen 2048 to check if trends hold with longer context ---
+  - RUN_ID: peft_lora_r128_qv_2048
+    ADAPTER_RANK: "128"
+    ADAPTER_ALPHA: "128"
+    ADAPTER_LOCATION: "all"
+    TRAIN_SEQ_LEN: "2048"
+
+
+  # --- Step 3: Method comparison at rank 128 ---
   # Uncomment once LoRA baseline is established
-  # - RUN_ID: peft_dora_r8
-  #   PEFT_RANK: "8"
-  #   PEFT_METHOD: "dora"
+  # - RUN_ID: peft_dora_r128
+  #   ADAPTER_RANK: "128"
+  #   ADAPTER_ALPHA: "128"
+  #   ADAPTER_METHOD: "dora"
 
-  # - RUN_ID: peft_mora_r8
-  #   PEFT_RANK: "8"
-  #   PEFT_METHOD: "mora"
+  # - RUN_ID: peft_mora_r128
+  #   ADAPTER_RANK: "128"
+  #   ADAPTER_ALPHA: "128"
+  #   ADAPTER_METHOD: "mora"
 
-  # - RUN_ID: peft_vera
-  #   PEFT_METHOD: "vera"
+  # - RUN_ID: peft_loha_r128
+  #   ADAPTER_RANK: "128"
+  #   ADAPTER_ALPHA: "128"
+  #   ADAPTER_METHOD: "loha"
 
-  # - RUN_ID: peft_loha_r8
-  #   PEFT_RANK: "8"
-  #   PEFT_METHOD: "loha"
-
-  # - RUN_ID: peft_adalora_r8
-  #   PEFT_RANK: "8"
-  #   PEFT_METHOD: "adalora"
+  # - RUN_ID: peft_adalora_r128
+  #   ADAPTER_RANK: "128"
+  #   ADAPTER_ALPHA: "128"
+  #   ADAPTER_METHOD: "adalora"

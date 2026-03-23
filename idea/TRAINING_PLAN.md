@@ -256,6 +256,20 @@ Test each method as a per-step adapter on the primary base. One adapter per UT s
 | 6 | **AdaLoRA** | Learns how to **reallocate rank budget** across layers/modules instead of keeping the same rank everywhere. | **Zhang et al., 2023 — _AdaLoRA: Adaptive Budget Allocation for Parameter-Efficient Fine-Tuning_**  [oai_citation:14‡arXiv](https://arxiv.org/abs/2303.10512?utm_source=chatgpt.com) | **Moderately relevant.** More useful if you want the model to learn which UT modules or recurrent steps deserve more capacity; less essential as a first expressiveness benchmark.  [oai_citation:15‡arXiv](https://arxiv.org/abs/2303.10512?utm_source=chatgpt.com) | **QingruZhang/AdaLoRA**  [oai_citation:16‡GitHub](https://github.com/QingruZhang/AdaLoRA?utm_source=chatgpt.com), also merged into **HF PEFT** according to the repo.  [oai_citation:17‡GitHub](https://github.com/QingruZhang/AdaLoRA?utm_source=chatgpt.com) |
 | 7 | **VeRA** | Shares a pair of random low-rank matrices across layers and learns only small scaling vectors. | **Kopiczko et al., 2023/2024 — _VeRA: Vector-based Random Matrix Adaptation_**  [oai_citation:18‡arXiv](https://arxiv.org/abs/2310.11454?utm_source=chatgpt.com) | **Less relevant for your main objective.** Good when trainable/storage budget is the main pain point, but less compelling when your priority is maximizing expressiveness in a shared block.  [oai_citation:19‡arXiv](https://arxiv.org/abs/2310.11454?utm_source=chatgpt.com) | **HF PEFT VeRA**  [oai_citation:20‡Hugging Face](https://huggingface.co/docs/peft/package_reference/vera?utm_source=chatgpt.com) |
 
+### Adapter Location Options
+
+Each PEFT method can target different subsets of projections. Use the `adapter_location` parameter to control this:
+
+| `adapter_location` | Q | K | V | O | MLP fc | MLP proj | Use case |
+|---|---|---|---|---|---|---|---|
+| `"qv-attn"` | yes | - | yes | - | - | - | Classic LoRA (Hu et al.) — minimal, cheapest |
+| `"qkvo-attn"` | yes | yes | yes | yes | - | - | Full attention adaptation |
+| `"ffn"` | - | - | - | - | yes | yes | MLP-only adaptation |
+| `"qv-attn-ffn"` | yes | - | yes | - | yes | yes | Q/V + MLP — good default |
+| `"all"` | yes | yes | yes | yes | yes | yes | Everything — most params, most expressive |
+
+**Recommendation:** start with `"qv-attn"` (the original LoRA targets) for rank sweeps, then test `"qv-attn-ffn"` to see if MLP adapters add value. Only use `"all"` if param budget allows — K and O adapters have diminishing returns in most settings.
+
 ### Experiment Plan
 
 **Step 1 — LoRA baseline (rank sweep):**
