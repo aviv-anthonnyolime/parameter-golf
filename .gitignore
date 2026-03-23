@@ -13,3 +13,4 @@ logs/
 *.pt
 *.pth
 *.ptz
+*.ipynb_checkpoints
