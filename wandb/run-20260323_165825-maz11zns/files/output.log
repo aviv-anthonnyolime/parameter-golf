@@ -1,0 +1,172 @@
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:80
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:10813928
+world_size:4 grad_accum_steps:2
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+tie_embeddings:True embed_lr:0.035 head_lr:0.0 matrix_lr:0.025 scalar_lr:0.025
+train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:1200.000
+seed:1337
+warmup_step:1/20
+warmup_step:2/20
+warmup_step:3/20
+warmup_step:4/20
+warmup_step:5/20
+warmup_step:6/20
+warmup_step:7/20
+warmup_step:8/20
+warmup_step:9/20
+warmup_step:10/20
+warmup_step:11/20
+warmup_step:12/20
+warmup_step:13/20
+warmup_step:14/20
+warmup_step:15/20
+warmup_step:16/20
+warmup_step:17/20
+warmup_step:18/20
+warmup_step:19/20
+warmup_step:20/20
+step:0/20000 val_loss:6.9412 val_bpb:4.1110 train_time:0ms step_avg:0.02ms
+step:1/20000 train_loss:6.9429 train_time:866ms step_avg:865.77ms
+step:2/20000 train_loss:11.6573 train_time:1677ms step_avg:838.41ms
+step:3/20000 train_loss:13.7344 train_time:2488ms step_avg:829.42ms
+step:4/20000 train_loss:12.5818 train_time:3299ms step_avg:824.82ms
+step:5/20000 train_loss:11.1233 train_time:4111ms step_avg:822.12ms
+step:6/20000 train_loss:9.6269 train_time:4922ms step_avg:820.27ms
+step:7/20000 train_loss:8.5088 train_time:5733ms step_avg:818.94ms
+step:8/20000 train_loss:8.0929 train_time:6544ms step_avg:817.98ms
+step:9/20000 train_loss:8.4548 train_time:7355ms step_avg:817.21ms
+step:10/20000 train_loss:8.1927 train_time:8166ms step_avg:816.56ms
+step:20/20000 train_loss:5.9985 train_time:16266ms step_avg:813.31ms
+step:30/20000 train_loss:5.7644 train_time:24367ms step_avg:812.23ms
+step:40/20000 train_loss:5.4648 train_time:32467ms step_avg:811.69ms
+step:50/20000 train_loss:5.2835 train_time:40569ms step_avg:811.39ms
+step:60/20000 train_loss:5.0841 train_time:48672ms step_avg:811.19ms
+step:70/20000 train_loss:4.8774 train_time:56774ms step_avg:811.06ms
+step:80/20000 train_loss:4.7643 train_time:64876ms step_avg:810.95ms
+step:90/20000 train_loss:4.5623 train_time:72980ms step_avg:810.88ms
+step:100/20000 train_loss:4.4672 train_time:81085ms step_avg:810.85ms
+step:110/20000 train_loss:4.3760 train_time:89189ms step_avg:810.81ms
+step:120/20000 train_loss:4.2910 train_time:97291ms step_avg:810.76ms
+step:130/20000 train_loss:4.2298 train_time:105393ms step_avg:810.72ms
+step:140/20000 train_loss:4.0646 train_time:113497ms step_avg:810.69ms
+step:150/20000 train_loss:4.0326 train_time:121599ms step_avg:810.66ms
+step:160/20000 train_loss:3.9228 train_time:129700ms step_avg:810.62ms
+step:170/20000 train_loss:3.9592 train_time:137802ms step_avg:810.60ms
+step:180/20000 train_loss:3.7949 train_time:145905ms step_avg:810.59ms
+step:190/20000 train_loss:3.7963 train_time:154009ms step_avg:810.58ms
+step:200/20000 train_loss:3.6707 train_time:162113ms step_avg:810.56ms
+step:210/20000 train_loss:3.6948 train_time:170216ms step_avg:810.55ms
+step:220/20000 train_loss:3.8107 train_time:178326ms step_avg:810.57ms
+step:230/20000 train_loss:3.5816 train_time:186429ms step_avg:810.56ms
+step:240/20000 train_loss:3.5737 train_time:194530ms step_avg:810.54ms
+step:250/20000 train_loss:3.5508 train_time:202635ms step_avg:810.54ms
+step:260/20000 train_loss:3.4119 train_time:210740ms step_avg:810.54ms
+step:270/20000 train_loss:3.4517 train_time:218844ms step_avg:810.53ms
+step:280/20000 train_loss:3.4449 train_time:226948ms step_avg:810.53ms
+step:290/20000 train_loss:3.4109 train_time:235051ms step_avg:810.52ms
+step:300/20000 train_loss:3.3146 train_time:243154ms step_avg:810.51ms
+step:310/20000 train_loss:3.3749 train_time:251258ms step_avg:810.51ms
+step:320/20000 train_loss:3.3151 train_time:259362ms step_avg:810.51ms
+step:330/20000 train_loss:3.2964 train_time:267466ms step_avg:810.50ms
+step:340/20000 train_loss:3.2724 train_time:275569ms step_avg:810.50ms
+step:350/20000 train_loss:3.3340 train_time:283673ms step_avg:810.49ms
+step:360/20000 train_loss:3.2649 train_time:291776ms step_avg:810.49ms
+step:370/20000 train_loss:3.1346 train_time:299878ms step_avg:810.48ms
+step:380/20000 train_loss:3.4016 train_time:307984ms step_avg:810.48ms
+step:390/20000 train_loss:3.2825 train_time:316130ms step_avg:810.59ms
+step:400/20000 train_loss:3.0297 train_time:324234ms step_avg:810.59ms
+step:410/20000 train_loss:3.1675 train_time:332338ms step_avg:810.58ms
+step:420/20000 train_loss:3.1574 train_time:340441ms step_avg:810.57ms
+step:430/20000 train_loss:3.0384 train_time:348545ms step_avg:810.57ms
+step:440/20000 train_loss:3.2130 train_time:356650ms step_avg:810.57ms
+step:450/20000 train_loss:3.1565 train_time:364755ms step_avg:810.57ms
+step:460/20000 train_loss:3.1877 train_time:372859ms step_avg:810.56ms
+step:470/20000 train_loss:3.0370 train_time:380965ms step_avg:810.56ms
+step:480/20000 train_loss:3.1236 train_time:389069ms step_avg:810.56ms
+step:490/20000 train_loss:3.1248 train_time:397173ms step_avg:810.56ms
+step:500/20000 train_loss:3.0145 train_time:405276ms step_avg:810.55ms
+step:510/20000 train_loss:3.0240 train_time:413380ms step_avg:810.55ms
+step:520/20000 train_loss:3.0554 train_time:421482ms step_avg:810.54ms
+step:530/20000 train_loss:3.1993 train_time:429584ms step_avg:810.54ms
+step:540/20000 train_loss:2.8463 train_time:437686ms step_avg:810.53ms
+step:550/20000 train_loss:2.9315 train_time:445791ms step_avg:810.53ms
+step:560/20000 train_loss:2.9297 train_time:453896ms step_avg:810.53ms
+step:570/20000 train_loss:2.9919 train_time:461999ms step_avg:810.52ms
+step:580/20000 train_loss:2.9064 train_time:470141ms step_avg:810.59ms
+step:590/20000 train_loss:2.8663 train_time:478244ms step_avg:810.58ms
+step:600/20000 train_loss:2.9429 train_time:486347ms step_avg:810.58ms
+step:610/20000 train_loss:2.8734 train_time:494450ms step_avg:810.57ms
+step:620/20000 train_loss:2.8809 train_time:502552ms step_avg:810.57ms
+step:630/20000 train_loss:3.0660 train_time:510655ms step_avg:810.56ms
+step:640/20000 train_loss:2.6487 train_time:518756ms step_avg:810.56ms
+Traceback (most recent call last):
+  File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase2_PEFT/train_gpt_peft.py", line 2193, in <module>
+    main()
+  File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase2_PEFT/train_gpt_peft.py", line 1993, in main
+    opt.step()
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/optim/optimizer.py", line 493, in wrapper
+    out = func(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+  File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase2_PEFT/train_gpt_peft.py", line 379, in step
+    g = zeropower_via_newtonschulz5(g, steps=backend_steps)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 574, in _fn
+    return fn(*args, **kwargs)
+  File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase2_PEFT/train_gpt_peft.py", line 303, in zeropower_via_newtonschulz5
+    def zeropower_via_newtonschulz5(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 745, in _fn
+    return fn(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/aot_autograd.py", line 1184, in forward
+    return compiled_fn(full_args)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 323, in runtime_wrapper
+    all_outs = call_func_at_runtime_with_args(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/utils.py", line 126, in call_func_at_runtime_with_args
+    out = normalize_as_list(f(args))
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 672, in inner_fn
+    outs = compiled_fn(args)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 490, in wrapper
+    return compiled_fn(runtime_args)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/output_code.py", line 466, in __call__
+    return self.current_callable(inputs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/utils.py", line 2128, in run
+    return model(new_inputs)
+  File "/tmp/torchinductor_ec2-user/77/c77f65vakmr5ilu57elhr5d3uu3t47qclxcntmz62uih3bhk7bey.py", line 243, in call
+    extern_kernels.addmm(buf12, buf11, buf7, alpha=1, beta=1, out=buf13)
+KeyboardInterrupt
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase2_PEFT/train_gpt_peft.py", line 2193, in <module>
+[rank0]:     main()
+[rank0]:   File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase2_PEFT/train_gpt_peft.py", line 1993, in main
+[rank0]:     opt.step()
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/optim/optimizer.py", line 493, in wrapper
+[rank0]:     out = func(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+[rank0]:     return func(*args, **kwargs)
+[rank0]:   File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase2_PEFT/train_gpt_peft.py", line 379, in step
+[rank0]:     g = zeropower_via_newtonschulz5(g, steps=backend_steps)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 574, in _fn
+[rank0]:     return fn(*args, **kwargs)
+[rank0]:   File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase2_PEFT/train_gpt_peft.py", line 303, in zeropower_via_newtonschulz5
+[rank0]:     def zeropower_via_newtonschulz5(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 745, in _fn
+[rank0]:     return fn(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/aot_autograd.py", line 1184, in forward
+[rank0]:     return compiled_fn(full_args)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 323, in runtime_wrapper
+[rank0]:     all_outs = call_func_at_runtime_with_args(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/utils.py", line 126, in call_func_at_runtime_with_args
+[rank0]:     out = normalize_as_list(f(args))
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 672, in inner_fn
+[rank0]:     outs = compiled_fn(args)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/runtime_wrappers.py", line 490, in wrapper
+[rank0]:     return compiled_fn(runtime_args)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/output_code.py", line 466, in __call__
+[rank0]:     return self.current_callable(inputs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/utils.py", line 2128, in run
+[rank0]:     return model(new_inputs)
+[rank0]:   File "/tmp/torchinductor_ec2-user/77/c77f65vakmr5ilu57elhr5d3uu3t47qclxcntmz62uih3bhk7bey.py", line 243, in call
+[rank0]:     extern_kernels.addmm(buf12, buf11, buf7, alpha=1, beta=1, out=buf13)
+[rank0]: KeyboardInterrupt

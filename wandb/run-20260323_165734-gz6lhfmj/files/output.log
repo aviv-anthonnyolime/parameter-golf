@@ -1,0 +1,234 @@
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:80
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:10813928
+world_size:4 grad_accum_steps:2
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+tie_embeddings:True embed_lr:0.035 head_lr:0.0 matrix_lr:0.025 scalar_lr:0.025
+train_batch_tokens:786432 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:1200.000
+seed:1337
+Traceback (most recent call last):
+  File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase2_PEFT/train_gpt_peft.py", line 2193, in <module>
+    main()
+  File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase2_PEFT/train_gpt_peft.py", line 1888, in main
+    warmup_loss = model(x, y)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/parallel/distributed.py", line 1643, in forward
+    else self._run_ddp_forward(*inputs, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/parallel/distributed.py", line 1459, in _run_ddp_forward
+    return self.module(*inputs, **kwargs)  # type: ignore[index]
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 574, in _fn
+    return fn(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 1374, in __call__
+    return hijacked_callback(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 547, in __call__
+    return _compile(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 986, in _compile
+    guarded_code = compile_inner(code, one_graph, hooks, transform)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 715, in compile_inner
+    return _compile_inner(code, one_graph, hooks, transform)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_utils_internal.py", line 95, in wrapper_function
+    return function(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 750, in _compile_inner
+    out_code = transform_code_object(code, transform)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/bytecode_transformation.py", line 1361, in transform_code_object
+    transformations(instructions, code_options)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 231, in _fn
+    return fn(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 662, in transform
+    tracer.run()
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 2868, in run
+    super().run()
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 1052, in run
+    while self.step():
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 962, in step
+    self.dispatch_table[inst.opcode](self, inst)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 3048, in RETURN_VALUE
+    self._return(inst)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 3033, in _return
+    self.output.compile_subgraph(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/output_graph.py", line 1136, in compile_subgraph
+    self.compile_and_call_fx_graph(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/output_graph.py", line 1382, in compile_and_call_fx_graph
+    compiled_fn = self.call_user_compiler(gm)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/output_graph.py", line 1432, in call_user_compiler
+    return self._call_user_compiler(gm)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/output_graph.py", line 1462, in _call_user_compiler
+    compiled_fn = compiler_fn(gm, self.example_inputs())
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/backends/distributed.py", line 528, in compile_fn
+    submod_compiler.run(*example_inputs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/fx/interpreter.py", line 167, in run
+    self.env[node] = self.run_node(node)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/backends/distributed.py", line 265, in run_node
+    compiled_submod_real = self.compile_submod(real_mod, new_args, kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/backends/distributed.py", line 180, in compile_submod
+    self.compiler(input_mod, args),
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/repro/after_dynamo.py", line 130, in __call__
+    compiled_gm = compiler_fn(gm, example_inputs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/repro/after_dynamo.py", line 130, in __call__
+    compiled_gm = compiler_fn(gm, example_inputs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/__init__.py", line 2340, in __call__
+    return compile_fx(model_, inputs_, config_patches=self.config)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/compile_fx.py", line 1863, in compile_fx
+    return aot_autograd(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/backends/common.py", line 83, in __call__
+    cg = aot_module_simplified(gm, example_inputs, **self.kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/aot_autograd.py", line 1155, in aot_module_simplified
+    compiled_fn = dispatch_and_compile()
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/aot_autograd.py", line 1131, in dispatch_and_compile
+    compiled_fn, _ = create_aot_dispatcher_function(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/aot_autograd.py", line 580, in create_aot_dispatcher_function
+    return _create_aot_dispatcher_function(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/aot_autograd.py", line 830, in _create_aot_dispatcher_function
+    compiled_fn, fw_metadata = compiler_fn(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/jit_compile_runtime_wrappers.py", line 449, in aot_dispatch_autograd
+    fw_module, bw_module = aot_config.partition_fn(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/compile_fx.py", line 1779, in partition_fn
+    _recursive_joint_graph_passes(gm)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/compile_fx.py", line 322, in _recursive_joint_graph_passes
+    joint_graph_passes(gm)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/fx_passes/joint_graph.py", line 468, in joint_graph_passes
+    ).apply_graph_pass(patterns.apply)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/fx/passes/graph_transform_observer.py", line 70, in apply_graph_pass
+    return pass_fn(self.gm.graph)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/pattern_matcher.py", line 1773, in apply
+    if is_match(m) and entry.extra_check(m):
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/pattern_matcher.py", line 1279, in check_fn
+    args[i] = torch.empty_strided(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/utils/_stats.py", line 21, in wrapper
+    return fn(*args, **kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_subclasses/fake_tensor.py", line 1276, in __torch_dispatch__
+    return self.dispatch(func, types, args, kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_subclasses/fake_tensor.py", line 1816, in dispatch
+    return self._cached_dispatch_impl(func, types, args, kwargs)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_subclasses/fake_tensor.py", line 1369, in _cached_dispatch_impl
+    output = self._output_from_cache_entry(state, entry, key, func, args)
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_subclasses/fake_tensor.py", line 1746, in _output_from_cache_entry
+    return self._get_output_tensor_from_cache_entry(
+  File "/opt/pg-venv/lib/python3.10/site-packages/torch/_subclasses/fake_tensor.py", line 1686, in _get_output_tensor_from_cache_entry
+    shape = tuple(check_value(v, state) for v in metadata.shape)
+KeyboardInterrupt
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase2_PEFT/train_gpt_peft.py", line 2193, in <module>
+[rank0]:     main()
+[rank0]:   File "/home/ec2-user/SageMaker/parameter-golf/experiments/phase2_PEFT/train_gpt_peft.py", line 1888, in main
+[rank0]:     warmup_loss = model(x, y)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/parallel/distributed.py", line 1643, in forward
+[rank0]:     else self._run_ddp_forward(*inputs, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/parallel/distributed.py", line 1459, in _run_ddp_forward
+[rank0]:     return self.module(*inputs, **kwargs)  # type: ignore[index]
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/eval_frame.py", line 574, in _fn
+[rank0]:     return fn(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+[rank0]:     return self._call_impl(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+[rank0]:     return forward_call(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 1374, in __call__
+[rank0]:     return hijacked_callback(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 547, in __call__
+[rank0]:     return _compile(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 986, in _compile
+[rank0]:     guarded_code = compile_inner(code, one_graph, hooks, transform)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 715, in compile_inner
+[rank0]:     return _compile_inner(code, one_graph, hooks, transform)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_utils_internal.py", line 95, in wrapper_function
+[rank0]:     return function(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 750, in _compile_inner
+[rank0]:     out_code = transform_code_object(code, transform)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/bytecode_transformation.py", line 1361, in transform_code_object
+[rank0]:     transformations(instructions, code_options)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 231, in _fn
+[rank0]:     return fn(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/convert_frame.py", line 662, in transform
+[rank0]:     tracer.run()
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 2868, in run
+[rank0]:     super().run()
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 1052, in run
+[rank0]:     while self.step():
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 962, in step
+[rank0]:     self.dispatch_table[inst.opcode](self, inst)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 3048, in RETURN_VALUE
+[rank0]:     self._return(inst)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/symbolic_convert.py", line 3033, in _return
+[rank0]:     self.output.compile_subgraph(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/output_graph.py", line 1136, in compile_subgraph
+[rank0]:     self.compile_and_call_fx_graph(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/output_graph.py", line 1382, in compile_and_call_fx_graph
+[rank0]:     compiled_fn = self.call_user_compiler(gm)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/output_graph.py", line 1432, in call_user_compiler
+[rank0]:     return self._call_user_compiler(gm)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/output_graph.py", line 1462, in _call_user_compiler
+[rank0]:     compiled_fn = compiler_fn(gm, self.example_inputs())
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/backends/distributed.py", line 528, in compile_fn
+[rank0]:     submod_compiler.run(*example_inputs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/fx/interpreter.py", line 167, in run
+[rank0]:     self.env[node] = self.run_node(node)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/backends/distributed.py", line 265, in run_node
+[rank0]:     compiled_submod_real = self.compile_submod(real_mod, new_args, kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/backends/distributed.py", line 180, in compile_submod
+[rank0]:     self.compiler(input_mod, args),
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/repro/after_dynamo.py", line 130, in __call__
+[rank0]:     compiled_gm = compiler_fn(gm, example_inputs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/repro/after_dynamo.py", line 130, in __call__
+[rank0]:     compiled_gm = compiler_fn(gm, example_inputs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/__init__.py", line 2340, in __call__
+[rank0]:     return compile_fx(model_, inputs_, config_patches=self.config)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/compile_fx.py", line 1863, in compile_fx
+[rank0]:     return aot_autograd(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_dynamo/backends/common.py", line 83, in __call__
+[rank0]:     cg = aot_module_simplified(gm, example_inputs, **self.kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/aot_autograd.py", line 1155, in aot_module_simplified
+[rank0]:     compiled_fn = dispatch_and_compile()
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/aot_autograd.py", line 1131, in dispatch_and_compile
+[rank0]:     compiled_fn, _ = create_aot_dispatcher_function(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/aot_autograd.py", line 580, in create_aot_dispatcher_function
+[rank0]:     return _create_aot_dispatcher_function(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/aot_autograd.py", line 830, in _create_aot_dispatcher_function
+[rank0]:     compiled_fn, fw_metadata = compiler_fn(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_functorch/_aot_autograd/jit_compile_runtime_wrappers.py", line 449, in aot_dispatch_autograd
+[rank0]:     fw_module, bw_module = aot_config.partition_fn(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/compile_fx.py", line 1779, in partition_fn
+[rank0]:     _recursive_joint_graph_passes(gm)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/compile_fx.py", line 322, in _recursive_joint_graph_passes
+[rank0]:     joint_graph_passes(gm)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/fx_passes/joint_graph.py", line 468, in joint_graph_passes
+[rank0]:     ).apply_graph_pass(patterns.apply)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/fx/passes/graph_transform_observer.py", line 70, in apply_graph_pass
+[rank0]:     return pass_fn(self.gm.graph)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/pattern_matcher.py", line 1773, in apply
+[rank0]:     if is_match(m) and entry.extra_check(m):
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_inductor/pattern_matcher.py", line 1279, in check_fn
+[rank0]:     args[i] = torch.empty_strided(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/utils/_stats.py", line 21, in wrapper
+[rank0]:     return fn(*args, **kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_subclasses/fake_tensor.py", line 1276, in __torch_dispatch__
+[rank0]:     return self.dispatch(func, types, args, kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_subclasses/fake_tensor.py", line 1816, in dispatch
+[rank0]:     return self._cached_dispatch_impl(func, types, args, kwargs)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_subclasses/fake_tensor.py", line 1369, in _cached_dispatch_impl
+[rank0]:     output = self._output_from_cache_entry(state, entry, key, func, args)
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_subclasses/fake_tensor.py", line 1746, in _output_from_cache_entry
+[rank0]:     return self._get_output_tensor_from_cache_entry(
+[rank0]:   File "/opt/pg-venv/lib/python3.10/site-packages/torch/_subclasses/fake_tensor.py", line 1686, in _get_output_tensor_from_cache_entry
+[rank0]:     shape = tuple(check_value(v, state) for v in metadata.shape)
+[rank0]: KeyboardInterrupt

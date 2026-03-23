@@ -46,16 +46,22 @@ runs:
   #   ADAPTER_LOCATION: "all"
 
   # --- Test with 5U to check if trends hold with more unique layers ---
-  - RUN_ID: peft_lora_r128_qv_5U
+  # - RUN_ID: peft_lora_r128_qv_5U
+  #   ADAPTER_RANK: "64"
+  #   ADAPTER_ALPHA: "64"
+  #   ADAPTER_LOCATION: "qv-attn"
+  #   NUM_UNIQUE_LAYERS: "5"
+    
+  # - RUN_ID: peft_lora_r16_all_5U
+  #   ADAPTER_RANK: "16"
+  #   ADAPTER_ALPHA: "16"
+  #   ADAPTER_LOCATION: "all"
+  #   NUM_UNIQUE_LAYERS: "5"
+    
+  - RUN_ID: peft_lora_r64_qkvo_5U
     ADAPTER_RANK: "64"
     ADAPTER_ALPHA: "64"
-    ADAPTER_LOCATION: "qv-attn"
-    NUM_UNIQUE_LAYERS: "5"
-    
-  - RUN_ID: peft_lora_r128_all_5U
-    ADAPTER_RANK: "16"
-    ADAPTER_ALPHA: "16"
-    ADAPTER_LOCATION: "all"
+    ADAPTER_LOCATION: "qkvo-attn"
     NUM_UNIQUE_LAYERS: "5"
 
   # --- Step 3: Method comparison at rank 128 ---
