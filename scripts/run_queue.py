@@ -87,8 +87,8 @@ def git_commit_and_push(result: dict, push: bool = True):
     docker_name = result.get("docker_name", "unknown")
     params_tag = result.get("params_tag", "?")
     experiment = result.get("experiment", "?")
-    val_loss = result.get("val_loss", 0)
-    val_bpb = result.get("val_bpb_ttt", result.get("val_bpb", 0))
+    val_loss = result.get("val_loss") or 0
+    val_bpb = result.get("val_bpb_ttt") or result.get("val_bpb") or 0
 
     commit_msg = (
         f"[{docker_name}] - [{params_tag}] - [{experiment}] - "
