@@ -152,13 +152,16 @@ Evaluation will be in the RunPod environment with all packages installed. `requi
 
 #### Setting Up on Amazon Linux 2 (AWS / SageMaker)
 
-If you're running on an Amazon Linux 2 instance (e.g. `g5dn.12xlarge` on SageMaker), three issues need to be addressed:
+If you're running on an Amazon Linux 2 instance (e.g. `g5dn.12xlarge` on SageMaker), several issues need to be addressed:
 
 - **GCC 7** (default) — NumPy 2.x requires GCC >= 9.3. GCC 10 is already installed but under a different binary name.
 - **CMake 2.8** (default) — `sentencepiece` and `pyarrow` require CMake >= 3.12.
+- **No Go toolchain** — `wandb >= 0.18` builds `wandb-core` from source and requires Go >= 1.26.1.
+- **No Rust toolchain** — `wandb >= 0.18` builds `gpu_stats` from source and requires Rust/Cargo.
+- **binutils 2.29** (default) — Rust's `ring` crate needs binutils >= 2.30 for AVX2 assembly. The setup script builds a newer version from source.
 - **SageMaker volume is only 4.8GB** — PyTorch + CUDA libs are ~2GB+. The venv must live on the root filesystem (`/`, 135GB) not in `/home/ec2-user/SageMaker`.
 
-The setup script handles all four automatically with no changes to training code.
+The setup script handles all of the above automatically with no changes to training code. The first run takes longer (~5-10 extra minutes) while Go, Rust, and binutils are installed; subsequent runs skip already-installed tools.
 
 **First run** (creates venv, symlinks, installs deps):
 

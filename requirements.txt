@@ -9,6 +9,6 @@ pyarrow<19
 datasets<4
 tiktoken
 sentencepiece
-wandb<0.18.0
+wandb==0.25.1
 pyyaml
 matplotlib
