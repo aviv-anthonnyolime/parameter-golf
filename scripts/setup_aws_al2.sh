@@ -91,7 +91,7 @@ if $NEED_BINUTILS; then
     curl -sOL "https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.gz"
     tar xzf "binutils-${BINUTILS_VERSION}.tar.gz"
     cd "binutils-${BINUTILS_VERSION}"
-    ./configure --prefix=/usr/local --quiet
+    ./configure --prefix=/usr/local --disable-gprofng --quiet
     make -j"$(nproc)" --quiet
     sudo make install --quiet
     cd /tmp && rm -rf "binutils-${BINUTILS_VERSION}" "binutils-${BINUTILS_VERSION}.tar.gz"
