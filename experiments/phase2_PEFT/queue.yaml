@@ -11,7 +11,7 @@ defaults:
   DATA_PATH: ./data/datasets/fineweb10B_sp1024
   TOKENIZER_PATH: ./data/tokenizers/fineweb_1024_bpe.model
   VOCAB_SIZE: "1024"
-  MAX_WALLCLOCK_SECONDS: "1200"   # 20 min screening runs
+  MAX_WALLCLOCK_SECONDS: "2500"   # 20 min screening runs
   TRAIN_LOG_EVERY: "10"
   WANDB_ENABLED: "1"
   WANDB_PROJECT: Openai-challenge-parameter-golf
@@ -82,13 +82,37 @@ runs:
   #   NUM_UNIQUE_LAYERS: "5"
 
   # 5U: rank 64, all layers — test if NOBLE gains more from broader coverage
-  - RUN_ID: peft_noble_r64_all_5U
+  # - RUN_ID: peft_noble_r64_all_5U
+  #   ADAPTER_METHOD: "noble"
+  #   ADAPTER_RANK: "64"
+  #   ADAPTER_LOCATION: "all"
+  #   ADAPTER_NOBLE_LR: "0.001"
+  #   NUM_UNIQUE_LAYERS: "5"
+
+  - RUN_ID: peft_noble_r8_all_5U_768D
+    ADAPTER_METHOD: "noble"
+    ADAPTER_RANK: "8"
+    ADAPTER_LOCATION: "all"
+    ADAPTER_NOBLE_LR: "0.001"
+    NUM_UNIQUE_LAYERS: "5"
+    MODEL_DIM: "768"
+
+  - RUN_ID: peft_noble_r64_all_5U_640D
     ADAPTER_METHOD: "noble"
     ADAPTER_RANK: "64"
     ADAPTER_LOCATION: "all"
     ADAPTER_NOBLE_LR: "0.001"
     NUM_UNIQUE_LAYERS: "5"
+    MODEL_DIM: "640"
 
+  - RUN_ID: peft_noble_r16_all_5U_768D
+    ADAPTER_METHOD: "noble"
+    ADAPTER_RANK: "16"
+    ADAPTER_LOCATION: "all"
+    ADAPTER_NOBLE_LR: "0.001"
+    NUM_UNIQUE_LAYERS: "5"
+    MODEL_DIM: "768"
+    
   # --- Step 3: Method comparison at rank 128 ---
   # Uncomment once LoRA baseline is established
   # - RUN_ID: peft_dora_r128

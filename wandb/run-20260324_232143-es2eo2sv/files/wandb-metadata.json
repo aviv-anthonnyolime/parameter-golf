@@ -1,0 +1,61 @@
+{
+  "os": "Linux-5.10.251-248.983.amzn2.x86_64-x86_64-with-glibc2.26",
+  "python": "CPython 3.12.12",
+  "startedAt": "2026-03-24T23:21:43.576649Z",
+  "program": "/home/ec2-user/SageMaker/parameter-golf/experiments/phase2_PEFT/train_gpt_peft.py",
+  "codePath": "experiments/phase2_PEFT/train_gpt_peft.py",
+  "codePathLocal": "experiments/phase2_PEFT/train_gpt_peft.py",
+  "git": {
+    "remote": "git@github.com:aviv-anthonnyolime/parameter-golf.git",
+    "commit": "776cc16595b10cc3b8cbd0b58f24a5d752eda415"
+  },
+  "email": "anthonnyolime@gmail.com",
+  "root": "/home/ec2-user/SageMaker/parameter-golf",
+  "host": "ip-172-16-41-240.eu-west-1.compute.internal",
+  "executable": "/opt/pg-venv/bin/python3",
+  "cpu_count": 24,
+  "cpu_count_logical": 48,
+  "gpu": "NVIDIA A10G",
+  "gpu_count": 4,
+  "disk": {
+    "/": {
+      "total": "144942542848",
+      "used": "121360191488"
+    }
+  },
+  "memory": {
+    "total": "200485216256"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA A10G",
+      "memoryTotal": "24146608128",
+      "cudaCores": 10240,
+      "architecture": "Ampere",
+      "uuid": "GPU-af022ed0-530e-05cb-0b13-570e82709889"
+    },
+    {
+      "name": "NVIDIA A10G",
+      "memoryTotal": "24146608128",
+      "cudaCores": 10240,
+      "architecture": "Ampere",
+      "uuid": "GPU-115799ce-608d-30ae-ab7b-dffcdb13a32c"
+    },
+    {
+      "name": "NVIDIA A10G",
+      "memoryTotal": "24146608128",
+      "cudaCores": 10240,
+      "architecture": "Ampere",
+      "uuid": "GPU-a4d45d56-8892-e8b4-dc1a-54f339d9104b"
+    },
+    {
+      "name": "NVIDIA A10G",
+      "memoryTotal": "24146608128",
+      "cudaCores": 10240,
+      "architecture": "Ampere",
+      "uuid": "GPU-5de20318-4584-6c0c-d7c9-bf32dd35b212"
+    }
+  ],
+  "cudaVersion": "12.8",
+  "writerId": "7kzqk1dswf1tjbmvwm7p33ubpx73yx87"
+}

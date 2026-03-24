@@ -282,7 +282,7 @@ class Hyperparameters:
         os.environ.get("MUON_MOMENTUM_WARMUP_START", 0.92)
     )
     muon_momentum_warmup_steps = int(
-        os.environ.get("MUON_MOMENTUM_WARMUP_STEPS", 1500 / 2)
+        os.environ.get("MUON_MOMENTUM_WARMUP_STEPS", 1500)
     )
     beta1 = float(os.environ.get("BETA1", 0.9))
     beta2 = float(os.environ.get("BETA2", 0.95))
