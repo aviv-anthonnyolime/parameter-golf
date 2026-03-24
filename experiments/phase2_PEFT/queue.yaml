@@ -66,27 +66,27 @@ runs:
 
   # --- NOBLE runs ---
   # 1U: extreme weight sharing, sanity check that NOBLE branch can differentiate steps
-  - RUN_ID: peft_noble_r64_qv_1U
-    ADAPTER_METHOD: "noble"
-    ADAPTER_RANK: "64"
-    ADAPTER_LOCATION: "qv-attn"
-    ADAPTER_NOBLE_LR: "0.025"
-    NUM_UNIQUE_LAYERS: "1"
+  # - RUN_ID: peft_noble_r64_qv_1U
+  #   ADAPTER_METHOD: "noble"
+  #   ADAPTER_RANK: "64"
+  #   ADAPTER_LOCATION: "qv-attn"
+  #   ADAPTER_NOBLE_LR: "0.025"
+  #   NUM_UNIQUE_LAYERS: "1"
 
   # 5U: rank 64, cheap location — apples-to-apples vs LoRA baseline
-  - RUN_ID: peft_noble_r64_qv_5U
-    ADAPTER_METHOD: "noble"
-    ADAPTER_RANK: "64"
-    ADAPTER_LOCATION: "qv-attn"
-    ADAPTER_NOBLE_LR: "0.025"
-    NUM_UNIQUE_LAYERS: "5"
+  # - RUN_ID: peft_noble_r64_qv_5U
+  #  ADAPTER_METHOD: "noble"
+  #   ADAPTER_RANK: "64"
+  #   ADAPTER_LOCATION: "qv-attn"
+  #   ADAPTER_NOBLE_LR: "0.025"
+  #   NUM_UNIQUE_LAYERS: "5"
 
   # 5U: rank 64, all layers — test if NOBLE gains more from broader coverage
   - RUN_ID: peft_noble_r64_all_5U
     ADAPTER_METHOD: "noble"
     ADAPTER_RANK: "64"
     ADAPTER_LOCATION: "all"
-    ADAPTER_NOBLE_LR: "0.025"
+    ADAPTER_NOBLE_LR: "0.001"
     NUM_UNIQUE_LAYERS: "5"
 
   # --- Step 3: Method comparison at rank 128 ---

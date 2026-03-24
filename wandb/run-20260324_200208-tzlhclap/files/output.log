@@ -1,0 +1,57 @@
+val_bpb:enabled tokenizer_kind=sentencepiece tokenizer_path=./data/tokenizers/fineweb_1024_bpe.model
+train_loader:dataset:fineweb10B_sp1024 train_shards:80
+val_loader:shards pattern=./data/datasets/fineweb10B_sp1024/fineweb_val_*.bin tokens:62021632
+model_params:14276648
+world_size:4 grad_accum_steps:2
+sdp_backends:cudnn=False flash=True mem_efficient=False math=False
+attention_mode:gqa num_heads:8 num_kv_heads:4
+tie_embeddings:True embed_lr:0.035 head_lr:0.0 matrix_lr:0.025 scalar_lr:0.025
+train_batch_tokens:524288 train_seq_len:1024 iterations:20000 warmup_steps:20 max_wallclock_seconds:1200.000
+seed:1337
+warmup_step:1/20
+warmup_step:2/20
+warmup_step:3/20
+warmup_step:4/20
+warmup_step:5/20
+warmup_step:6/20
+warmup_step:7/20
+warmup_step:8/20
+warmup_step:9/20
+warmup_step:10/20
+warmup_step:11/20
+warmup_step:12/20
+warmup_step:13/20
+warmup_step:14/20
+warmup_step:15/20
+warmup_step:16/20
+warmup_step:17/20
+warmup_step:18/20
+warmup_step:19/20
+warmup_step:20/20
+step:0/20000 val_loss:6.9485 val_bpb:4.1153 train_time:0ms step_avg:0.02ms
+step:1/20000 train_loss:6.9497 train_time:1059ms step_avg:1058.99ms
+step:2/20000 train_loss:11.5772 train_time:2059ms step_avg:1029.38ms
+step:3/20000 train_loss:12.5537 train_time:3058ms step_avg:1019.41ms
+step:4/20000 train_loss:10.8828 train_time:4058ms step_avg:1014.47ms
+step:5/20000 train_loss:9.5140 train_time:5059ms step_avg:1011.79ms
+step:6/20000 train_loss:8.6028 train_time:6065ms step_avg:1010.85ms
+step:7/20000 train_loss:8.1765 train_time:7065ms step_avg:1009.33ms
+step:8/20000 train_loss:8.1821 train_time:8065ms step_avg:1008.14ms
+step:9/20000 train_loss:7.7912 train_time:9064ms step_avg:1007.15ms
+step:10/20000 train_loss:7.8984 train_time:10064ms step_avg:1006.41ms
+step:20/20000 train_loss:6.1419 train_time:20075ms step_avg:1003.74ms
+step:30/20000 train_loss:5.9656 train_time:30065ms step_avg:1002.18ms
+step:40/20000 train_loss:5.8432 train_time:40058ms step_avg:1001.44ms
+step:50/20000 train_loss:5.6702 train_time:50058ms step_avg:1001.16ms
+step:60/20000 train_loss:5.5174 train_time:60058ms step_avg:1000.97ms
+step:70/20000 train_loss:5.9794 train_time:70084ms step_avg:1001.20ms
+step:80/20000 train_loss:7.5576 train_time:80090ms step_avg:1001.13ms
+step:90/20000 train_loss:9.0279 train_time:90095ms step_avg:1001.05ms
+step:100/20000 train_loss:12.0683 train_time:100092ms step_avg:1000.92ms
+Exception ignored in: <function WeakValueDictionary.__init__.<locals>.remove at 0x7ff571adc860>
+Traceback (most recent call last):
+  File "/home/ec2-user/anaconda3/lib/python3.12/weakref.py", line 105, in remove
+    def remove(wr, selfref=ref(self), _atomic_removal=_remove_dead_weakref):
+
+KeyboardInterrupt:
+[34m[1mwandb[0m: [33mWARNING[0m Fatal error while uploading data. Some run data will not be synced, but it will still be written to disk. Use `wandb sync` at the end of the run to try uploading.
