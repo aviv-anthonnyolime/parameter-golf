@@ -254,8 +254,14 @@ class Hyperparameters:
     tie_embeddings = bool(int(os.environ.get("TIE_EMBEDDINGS", "1")))
     rope_base = float(os.environ.get("ROPE_BASE", 10000.0))
     logit_softcap = float(os.environ.get("LOGIT_SOFTCAP", 30.0))
+    init_strategy = os.environ.get(
+        "INIT_STRATEGY", "zeros"
+    ).lower()  # zeros, kaiming_uniform, orthogonal, xavier_uniform
 
     # Adapters and low-rank updates.
+    adapter_noble_lr = float(
+        os.environ.get("ADAPTER_NOBLE_LR", 0.025)
+    )  # default to matrix_lr
     adapter_rank = int(os.environ.get("ADAPTER_RANK", 16))
     adapter_alpha = float(os.environ.get("ADAPTER_ALPHA", 16.0))
     adapter_method = os.environ.get("ADAPTER_METHOD", "").lower()
@@ -1000,6 +1006,91 @@ class AdapterLoRA(nn.Module):
         return (self.alpha / self.rank) * self.B(self.A(x))
 
 
+class AdapterNoble(nn.Module):
+    """
+    Noble adapeter test, which applies the low-rank update in the activation space instead of weight space.
+    Noble equations: f_NOBLE(x) = x*W + b + σ(x*W_down)*W_up
+    equation : σ_cos(h) = cos(ω2 ⊙ (M · cos(ω1 ⊙ h + ϕ1)) + ϕ2)
+
+    """
+
+    def __init__(self, input_dim: int, output_dim: int, rank: int, alpha: int):
+        super().__init__()
+        self.rank = rank
+
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+
+        self.W_down = CastedLinear(input_dim, rank)
+        self.W_up = CastedLinear(rank, output_dim)
+
+        self.W_m = CastedLinear(rank, rank)
+
+        self.omega_1 = nn.Parameter(torch.ones(rank, dtype=torch.float32))
+        self.omega_2 = nn.Parameter(torch.ones(rank, dtype=torch.float32))
+
+        self.phi_1 = nn.Parameter(torch.zeros(rank, dtype=torch.float32))
+        self.phi_2 = nn.Parameter(torch.zeros(rank, dtype=torch.float32))
+
+        self.activation = torch.cos
+
+        self.reset()
+
+    def reset(self) -> None:
+        bound_near_zero = 0.01 / math.sqrt(self.rank)
+        bound = 1.0 / math.sqrt(self.input_dim)
+        with torch.no_grad():
+            self.W_down.weight.uniform_(-bound, bound)  # kaiming-uniform
+            self.W_up.weight.uniform_(-bound_near_zero, bound_near_zero)
+
+            nn.init.xavier_uniform_(self.W_m.weight)
+
+            self.phi_1.normal_(0, 0.1)
+            self.phi_2.normal_(0, 0.1)
+
+            self.omega_1.uniform_(0.8, 1.2)
+            self.omega_2.uniform_(0.8, 1.2)
+
+    def param_groups(self, base_lr: float) -> dict[str, list[dict]]:
+        dim = min(self.input_dim, self.output_dim)
+        lr_up = base_lr * (dim / self.rank) ** 0.6
+        lr_m = base_lr * (dim / self.rank) ** 0.45
+        return {
+            "adam": [
+                {
+                    "params": [self.omega_1, self.omega_2],
+                    "lr": base_lr * 3.0,
+                    "base_lr": base_lr * 3.0,
+                },
+                {
+                    "params": [self.phi_1, self.phi_2],
+                    "lr": base_lr * 5.0,
+                    "base_lr": base_lr * 5.0,
+                },
+            ],
+            "muon": [
+                {"params": [self.W_down.weight], "lr": base_lr, "base_lr": base_lr},
+                {"params": [self.W_up.weight], "lr": lr_up, "base_lr": lr_up},
+                {"params": [self.W_m.weight], "lr": lr_m, "base_lr": lr_m},
+            ],
+        }
+
+    def forward(self, x: Tensor) -> Tensor:
+
+        x_ = self.W_down(x)
+
+        h_1 = self.activation(self.omega_1 * x_ + self.phi_1)
+        h_2 = self.W_m(h_1)
+        cos_output = self.activation(self.omega_2 * h_2 + self.phi_2)
+
+        output = self.W_up(cos_output)
+
+        return output
+
+
+ADAPTER_METHOD_MAP = {"lora": AdapterLoRA, "noble": AdapterNoble}
+
+
 class GPT(nn.Module):
     def __init__(
         self,
@@ -1019,10 +1110,12 @@ class GPT(nn.Module):
         adapter_alpha: int = 16,
         adapter_location: str = "all",
         adapter_method: str = "lora",
+        init_strategy: str = "kaiming_uniform",
     ):
         super().__init__()
         if logit_softcap <= 0.0:
             raise ValueError(f"logit_softcap must be positive, got {logit_softcap}")
+        self.init_strategy = init_strategy
         self.tie_embeddings = tie_embeddings
         self.tied_embed_init_std = tied_embed_init_std
         self.logit_softcap = logit_softcap
@@ -1068,9 +1161,7 @@ class GPT(nn.Module):
             "adalora",
             "vera",
         }
-        self.adapter_method = (
-            AdapterLoRA if self.adapter_enabled and adapter_method == "lora" else None
-        )
+        self.adapter_method = ADAPTER_METHOD_MAP.get(adapter_method, None)
         # "all", "ffn", "qv-attn","qkvo-attn", "qv-attn-ffn"
         self.adapter_location_qv = adapter_location in {
             "all",
@@ -1139,7 +1230,30 @@ class GPT(nn.Module):
             nn.init.normal_(self.tok_emb.weight, mean=0.0, std=self.tied_embed_init_std)
         for module in self.modules():
             if isinstance(module, nn.Linear) and getattr(module, "_zero_init", False):
-                nn.init.zeros_(module.weight)
+                if self.init_strategy == "zeros":
+                    nn.init.zeros_(module.weight)
+                elif self.init_strategy == "kaiming_uniform":
+                    nn.init.kaiming_uniform_(module.weight, a=math.sqrt(5))
+                    if module.bias is not None:
+                        fan_in, _ = nn.init._calculate_fan_in_and_fan_out(module.weight)
+                        bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
+                        nn.init.uniform_(module.bias, -bound, bound)
+                elif self.init_strategy == "orthogonal":
+                    nn.init.orthogonal_(module.weight)
+                    if module.bias is not None:
+                        nn.init.zeros_(module.bias)
+                elif self.init_strategy == "normal":
+                    nn.init.normal_(module.weight, mean=0.0, std=0.02)
+                    if module.bias is not None:
+                        nn.init.zeros_(module.bias)
+                elif self.init_strategy == "xavier_uniform":
+                    nn.init.xavier_uniform_(
+                        module.weight,
+                        gain=nn.init.calculate_gain("leaky_relu", param=0),
+                    )
+
+                else:
+                    raise ValueError(f"Unsupported init_strategy: {self.init_strategy}")
 
     def forward(self, input_ids: Tensor, target_ids: Tensor, lora=None) -> Tensor:
         x = self.tok_emb(input_ids)
@@ -1706,6 +1820,7 @@ def main() -> None:
             adapter_alpha=args.adapter_alpha,
             adapter_location=args.adapter_location,
             adapter_method=args.adapter_method,
+            init_strategy=args.init_strategy,
         )
         .to(device)
         .bfloat16()
@@ -1732,6 +1847,8 @@ def main() -> None:
     # After building block_named_params, also collect adapter params
     adapter_matrix_params = []
     adapter_scalar_params = []
+    noble_params_groups_adam = []
+    noble_params_groups_muon = []
     for attr_name in (
         "q_adapter",
         "k_adapter",
@@ -1744,11 +1861,20 @@ def main() -> None:
         if module_list is not None:
             for adapter in module_list:
                 if adapter is not None:
-                    for p in adapter.parameters():
-                        if p.ndim == 2:
-                            adapter_matrix_params.append(p)
-                        elif p.ndim < 2:
-                            adapter_scalar_params.append(p)
+                    if isinstance(adapter, AdapterNoble):
+                        param_groups_list = adapter.param_groups(args.adapter_noble_lr)
+                        noble_params_groups_adam.extend(param_groups_list["adam"])
+                        noble_params_groups_muon.extend(param_groups_list["muon"])
+                    elif isinstance(adapter, AdapterLoRA):
+                        for p in adapter.parameters():
+                            if p.ndim == 2:
+                                adapter_matrix_params.append(p)
+                            elif p.ndim < 2:
+                                adapter_scalar_params.append(p)
+                    else:
+                        raise ValueError(
+                            f"Unsupported adapter type {type(adapter)} in {attr_name}"
+                        )
 
     matrix_params = [
         p
@@ -1789,6 +1915,15 @@ def main() -> None:
         eps=args.adam_eps,
         fused=True,
     )
+
+    if noble_params_groups_adam:
+        for group in noble_params_groups_adam:
+            optimizer_scalar.add_param_group(group)
+    if noble_params_groups_muon:
+        for group in noble_params_groups_muon:
+            group["weight_decay"] = 0.0
+            optimizer_muon.add_param_group(group)
+
     optimizers: list[torch.optim.Optimizer] = [
         optimizer_tok,
         optimizer_muon,

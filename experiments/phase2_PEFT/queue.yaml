@@ -18,7 +18,7 @@ defaults:
   GRAD_ACCUM_STEPS: "2"
   # Base UT config
   NUM_LAYERS: "10"
-  NUM_UNIQUE_LAYERS: "1"
+  NUM_UNIQUE_LAYERS: "5"
   MODEL_DIM: "512"
   MLP_MULT: "2"
   NUM_HEADS: "8"
@@ -28,9 +28,9 @@ defaults:
   WARMDOWN_ITERS: "400"
   # PEFT defaults
   ADAPTER_METHOD: "lora"
-  ADAPTER_RANK: "16"
-  ADAPTER_ALPHA: "16"
-  ADAPTER_LOCATION: "all"
+  ADAPTER_RANK: "64"
+  ADAPTER_ALPHA: "64"
+  ADAPTER_LOCATION: "qv-attn"
   SKIP_TTT: "1"          # skip ~10min TTT LoRA eval; set "0" for final/overnight runs
 
 runs:
