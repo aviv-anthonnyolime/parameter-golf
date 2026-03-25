@@ -5,7 +5,7 @@
 
 **OpenAI Model Craft Challenge: Parameter Golf** is a challenge to train the best language model that fits in a 16MB artifact and trains in under 10 minutes on 8xH100s, evaluated by compression on the FineWeb validation set (tokenizer-agnostic, bits per byte).
 
-This challenge is heavily inspired by the [NanoGPT Speedrunning](https://github.com/KellerJordan/modded-nanogpt) challenge, where participants compete to train a model that reaches 3.28 FineWeb validation loss as quickly as possible. We're excited to see how optimizing for a parameter-constrained setting pushes people toward unique architectures (test-time compute, aggressive parameter tying, depth recurrence, low-rank training, ...), compression schemes (low precision, QAT, bitnets, novel tokenizers, ...), and other creative submissions (test-time training, long context, megakernels ...). 
+This challenge is heavily inspired by the [NanoGPT Speedrunning](https://github.com/KellerJordan/modded-nanogpt) challenge, where participants compete to train a model that reaches 3.28 FineWeb validation loss as quickly as possible. We're excited to see how optimizing for a parameter-constrained setting pushes people toward unique architectures (test-time compute, aggressive parameter tying, depth recurrence, low-rank training, ...), compression schemes (low precision, QAT, bitnets, novel tokenizers, ...), and other creative submissions (test-time training, long context, megakernels ...).
 
 If you're familiar with [neural scaling laws](https://arxiv.org/abs/2001.08361), you can consider this challenge a form of L(N) optimization, where the objective is to optimize the lowest loss given a fixed number of parameters (N) unconstrained by data, compute, steps, or architecture. Challenges like the [NanoGPT Speedrun](https://github.com/KellerJordan/modded-nanogpt), which optimizes for a form of L(T) (~lowest time given constrained loss) or the [NanoGPT Slowrun](https://github.com/qlabs-eng/slowrun), which optimizes for L(D) (lowest loss given constrained dataset size), can be thought of as equivalent challenges in this family.
 
@@ -16,13 +16,13 @@ When requesting compute, please make sure you choose the appropriate level, writ
 
 ## Participant Form
 
-If you enjoy solving very difficult technical problems, please introduce yourself via the [Challenge Participant Form](https://jobs.ashbyhq.com/openai/form/open-ai-challenge-parameter-golf). It helps us attribute challenge submissions and reach out about opportunities with OpenAI. _Completing the form is not required to participate._
+If you enjoy solving very difficult technical problems, please introduce yourself via the [Challenge Participant Form](https://jobs.ashbyhq.com/openai/form/open-ai-challenge-parameter-golf). It helps us attribute challenge submissions and reach out about opportunities with OpenAI. *Completing the form is not required to participate.*
 
 Many researchers at OpenAI first distinguished themselves through elite mathematics and programming competitions. The Model Craft Challenge is designed in that spirit: testing the ability to tackle unfamiliar problems with creativity and rigor, qualities we believe are essential for frontier AI research.
 
 In June, we plan to hire a small cohort of early-career researchers, targeting current undergraduate students and recent graduates, including Olympiad medalists and elite competitors. For exceptional participants, the challenge may also serve as a way to stand out to OpenAI researchers and recruiters.
 
-The challenge runs from March 18th to April 30th. 
+The challenge runs from March 18th to April 30th.
 
 Happy training!
 
@@ -201,8 +201,9 @@ bash scripts/setup_git_ssh.sh
 ```
 
 This will:
+
 1. Generate an ED25519 SSH key (if none exists)
-2. Print the public key — copy it and add it at https://github.com/settings/ssh/new
+2. Print the public key — copy it and add it at <https://github.com/settings/ssh/new>
 3. Switch the `origin` remote from HTTPS to SSH automatically
 4. Test the connection
 
@@ -390,6 +391,7 @@ bash scripts/kill_training.sh
 ```
 
 This will:
+
 1. Gracefully kill processes in dependency order: `run_queue.py` → `torchrun` → `torch.distributed` → `train_gpt`
 2. Wait 2 seconds, then force-kill (`SIGKILL`) anything still alive
 3. Clean up orphaned NCCL shared memory (`/dev/shm/nccl-*`)
@@ -399,15 +401,15 @@ Safe to run multiple times — won't error if nothing is running.
 
 #### Scripts Summary
 
-| Script                 | Description                                                      |
-| ---------------------- | ---------------------------------------------------------------- |
-| `scripts/ranking.py`   | Display ranked leaderboard + matplotlib charts from JSONL results|
-| `scripts/run_queue.py` | Run a YAML queue of experiments with auto git commit/push        |
-| `scripts/promote.py`   | Pick best local runs and generate RunPod 8×H100 queue            |
-| `scripts/model_size.py`| Estimate compressed model size + GPU memory for DDP training     |
-| `scripts/naming.py`    | Docker-style adjective-animal name generator (used internally)   |
-| `scripts/kill_training.sh` | Kill all training processes and free GPU resources            |
-| `scripts/setup_git_ssh.sh` | Set up SSH-based git push on remote machines                 |
+| Script                     | Description                                                       |
+|----------------------------|-------------------------------------------------------------------|
+| `scripts/ranking.py`       | Display ranked leaderboard + matplotlib charts from JSONL results |
+| `scripts/run_queue.py`     | Run a YAML queue of experiments with auto git commit/push         |
+| `scripts/promote.py`       | Pick best local runs and generate RunPod 8×H100 queue             |
+| `scripts/model_size.py`    | Estimate compressed model size + GPU memory for DDP training      |
+| `scripts/naming.py`        | Docker-style adjective-animal name generator (used internally)    |
+| `scripts/kill_training.sh` | Kill all training processes and free GPU resources                |
+| `scripts/setup_git_ssh.sh` | Set up SSH-based git push on remote machines                      |
 
 ## FAQ
 
@@ -429,7 +431,7 @@ There's no perfectly clear answer here and it's hard to draw a clean line around
 
 We won't accept submissions that take more than 10 minutes on 8xH100 to evaluate (Note: This limit is in addition to the 10 minutes of training time allowed!), but otherwise you're free to evaluate however. As with modded-nanogpt, we allow evaluation at any sequence length. And, obviously, you aren't allowed to access any training data during evaluation, unless you pay for those bits in the <16MB limit. We encourage competitors to push the bounds of evaluation methods as aggressively as with training methods. You CANNOT access validation data during training, e.g. by compressing it into your 16mb with "paid prefix".
 
-If it isn't abundantly obvious: You can't cheat on your test loss. You can't cheat by training on the validation set before you evaluate on the validation set. The validation language around test-time training has been confusing people: you are only allowed to test-time train on validation set tokens _you've already evaluated your model on_, since those tokens have already been graded!
+If it isn't abundantly obvious: You can't cheat on your test loss. You can't cheat by training on the validation set before you evaluate on the validation set. The validation language around test-time training has been confusing people: you are only allowed to test-time train on validation set tokens *you've already evaluated your model on*, since those tokens have already been graded!
 
 **What is the process for accepting new submissions?**
 
@@ -438,7 +440,6 @@ Since all submissions are public, we're accepting record submissions chronologic
 **Can I import XYZ package or library?**
 
 Yes, you're free to import any package or library you want, so long as it does not unjustly violate the rules on evaluation, compute, training time, code size or otherwise. Just include a requirements.txt in your records folder and mention setup instructions in your README.md. Since you don't pay for bits imported in Python libraries, limitations clearly apply: You can't sneak in extra compute, capabilities, or massively increase effective code size with custom libraries, but importing FlashAttention, etc. is completely fine.
-
 
 ## Submission Process
 
@@ -473,7 +474,6 @@ Non-record submissions should be made in the same fashion as SOTA records, as de
 The `train_gpt.py` and `train_gpt_mlx.py` scripts are intended as good launching-off points for new participants, not SOTA configs. We'll accept PRs that tune, improve, or simplify these scripts without significantly increasing complexity, but the best models should stay in the `/records` folder.
 
 ## Support
-
 
 Join the [OpenAI Discord server](https://discord.com/invite/openai) and visit the Parameter Golf channels (#parameter-golf-discussions, #parameter-golf-announcements) and ask questions.
 

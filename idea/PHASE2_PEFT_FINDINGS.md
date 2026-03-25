@@ -20,21 +20,21 @@
 
 ## All Phase 2 Runs
 
-| Docker | Config | Location | Rank | Steps | Val BPB | ms/step | Size MB | Notes |
-|---|---|---|---|---|---|---|---|---|
-| rustic-finch | 10L-5U-512d | qv-attn | 64 | 1289 | **1.3812** | 931.5 | 9.79 | Best PEFT |
-| dark-iguana | 10L-5U-512d | qkvo-attn | 64 | 1674 | **1.3812** | 716.9 | 12.21 | Same bpb, heavier |
-| quiet-impala | 10L-1U-512d | qv-attn | 16 | 1968 | 1.5042 | 610.1 | 2.57 | Low rank, 1U |
-| cool-puma | 10L-1U-512d | all | 64 | 1493 | 1.5056 | 804.0 | 9.70 | 1U even with r64 |
-| zippy-husky | 10L-5U-512d | all | 16 | 0 | — | 810.6 | — | **CRASHED** |
+| Docker       | Config      | Location  | Rank | Steps | Val BPB    | ms/step | Size MB | Notes             |
+|--------------|-------------|-----------|------|-------|------------|---------|---------|-------------------|
+| rustic-finch | 10L-5U-512d | qv-attn   | 64   | 1289  | **1.3812** | 931.5   | 9.79    | Best PEFT         |
+| dark-iguana  | 10L-5U-512d | qkvo-attn | 64   | 1674  | **1.3812** | 716.9   | 12.21   | Same bpb, heavier |
+| quiet-impala | 10L-1U-512d | qv-attn   | 16   | 1968  | 1.5042     | 610.1   | 2.57    | Low rank, 1U      |
+| cool-puma    | 10L-1U-512d | all       | 64   | 1493  | 1.5056     | 804.0   | 9.70    | 1U even with r64  |
+| zippy-husky  | 10L-5U-512d | all       | 16   | 0     | —          | 810.6   | —       | **CRASHED**       |
 
 ### Phase 1 reference points (same hardware, longer runs)
 
-| Config | Steps | Val BPB | ms/step | Size MB |
-|---|---|---|---|---|
-| 9L-512d (baseline) | 6564 | 1.2378 | 548.5 | 15.08 |
-| 10L-5U-512d (no LoRA) | 3452 | 1.3348 | 579.4 | 8.51 |
-| 10L-1U-512d (no LoRA) | 3357 | 1.4803 | 595.9 | 2.06 |
+| Config                | Steps | Val BPB | ms/step | Size MB |
+|-----------------------|-------|---------|---------|---------|
+| 9L-512d (baseline)    | 6564  | 1.2378  | 548.5   | 15.08   |
+| 10L-5U-512d (no LoRA) | 3452  | 1.3348  | 579.4   | 8.51    |
+| 10L-1U-512d (no LoRA) | 3357  | 1.4803  | 595.9   | 2.06    |
 
 ---
 
@@ -42,11 +42,11 @@
 
 r64 beats r16 in every comparable configuration.
 
-| Config | Rank | Val BPB | Δ vs no-LoRA |
-|---|---|---|---|
-| 10L-1U qv-attn | 16 | 1.5042 | +0.024 (worse) |
-| 10L-1U all | 64 | 1.5056 | +0.026 (worse) |
-| 10L-5U qv-attn | 64 | 1.3812 | +0.046 vs Phase1 |
+| Config         | Rank | Val BPB | Δ vs no-LoRA     |
+|----------------|------|---------|------------------|
+| 10L-1U qv-attn | 16   | 1.5042  | +0.024 (worse)   |
+| 10L-1U all     | 64   | 1.5056  | +0.026 (worse)   |
+| 10L-5U qv-attn | 64   | 1.3812  | +0.046 vs Phase1 |
 
 The r64 runs generally show better train loss curves (lower loss earlier). The r16 runs barely improve over no-adapter baselines. This suggests **the expressivity of LoRA matters more than parameter budget** for this task — rank is the key lever, not location count.
 
@@ -58,10 +58,10 @@ The r64 runs generally show better train loss curves (lower loss earlier). The r
 
 Comparing rustic-finch (qv, r64) and dark-iguana (qkvo, r64) at 5U:
 
-| Location | BPB | ms/step | Size MB | Steps in 20min |
-|---|---|---|---|---|
-| qv-attn | **1.3812** | 931.5 | 9.79 | 1289 |
-| qkvo-attn | **1.3812** | 716.9 | 12.21 | 1674 |
+| Location  | BPB        | ms/step | Size MB | Steps in 20min |
+|-----------|------------|---------|---------|----------------|
+| qv-attn   | **1.3812** | 931.5   | 9.79    | 1289           |
+| qkvo-attn | **1.3812** | 716.9   | 12.21   | 1674           |
 
 Same val BPB, but qkvo is 2.42 MB heavier and runs faster per step (surprising — more adapters but less ms/step, likely due to different batch configs in these runs). The key result is: **adding K and O adapters did not improve over Q+V only**, which is consistent with the original LoRA paper (Hu et al. 2021) and most literature. K is the query-key similarity signal — adapting it disrupts learned attention patterns. O is output projection — less information bottleneck than Q/V.
 
@@ -83,11 +83,11 @@ FFN adapters add two extra matmuls per block per step. For a 10-step 1U model: 1
 
 ## Finding 4: 1U is Still Too Non-Expressive
 
-| Config | Val BPB | Steps | Δ vs 1U no-LoRA |
-|---|---|---|---|
-| 10L-1U no LoRA (Phase 1) | 1.4803 | ~3357 | baseline |
-| 10L-1U + LoRA r16 qv | 1.5042 | 1968 | +0.024 worse |
-| 10L-1U + LoRA r64 all | 1.5056 | 1493 | +0.026 worse |
+| Config                   | Val BPB | Steps | Δ vs 1U no-LoRA |
+|--------------------------|---------|-------|-----------------|
+| 10L-1U no LoRA (Phase 1) | 1.4803  | ~3357 | baseline        |
+| 10L-1U + LoRA r16 qv     | 1.5042  | 1968  | +0.024 worse    |
+| 10L-1U + LoRA r64 all    | 1.5056  | 1493  | +0.026 worse    |
 
 LoRA on 1U shows **no improvement** over no-LoRA 1U. The runs were shorter (1200s vs ~2000s in Phase 1) but the val curves suggest these runs hadn't converged to better territory either. The single shared block is fundamentally too constrained — it needs to simultaneously learn "shallow reasoning" (early steps) and "deep reasoning" (late steps), which are conflicting objectives. A rank-64 LoRA delta of shape `(512, 64)×(64, 512)` = 65K params per step can't fix this.
 
@@ -98,6 +98,7 @@ LoRA on 1U shows **no improvement** over no-LoRA 1U. The runs were shorter (1200
 ## Finding 5: The Real Bottleneck — Steps, Not Adapter Quality
 
 The 5U+LoRA runs got **63% fewer steps** than Phase 1 5U (1289 vs 3452). This is a double hit:
+
 1. `TRAIN_BATCH_TOKENS = 786,432` instead of `524,288` → each step processes 50% more data → each step takes longer
 2. LoRA adapter forward/backward adds ~15-25% to ms/step on top of that
 
@@ -120,22 +121,25 @@ The real test is: *at equal steps, does 5U+LoRA beat 5U without LoRA?*
 ## What to Do Next
 
 ### Immediate fixes before next run
+
 1. Reset `TRAIN_BATCH_TOKENS` to `524,288` in PEFT script defaults
 2. Set `NUM_UNIQUE_LAYERS=5` as queue default
 3. Keep `qv-attn` as the default location
 4. Investigate zippy-husky crash log
 
 ### Phase 2 Part 2 experiments
+
 Now that we know r64+qv on 5U is the best config, run a proper comparison:
 
-| Priority | Config | Goal |
-|---|---|---|
-| HIGH | 10L-5U + LoRA r64 qv (fixed batch) | Clean baseline with correct 524K batch |
-| HIGH | 10L-5U + LoRA r128 qv (fixed batch) | Test if more rank still helps |
-| MEDIUM | 10L-5U + NOBLE qv (from scratch) | Nonlinear branch — likely better than LoRA |
-| LOW | 10L-1U + LoRA r128 qv (1H overnight) | Give 1U a real chance |
+| Priority | Config                               | Goal                                       |
+|----------|--------------------------------------|--------------------------------------------|
+| HIGH     | 10L-5U + LoRA r64 qv (fixed batch)   | Clean baseline with correct 524K batch     |
+| HIGH     | 10L-5U + LoRA r128 qv (fixed batch)  | Test if more rank still helps              |
+| MEDIUM   | 10L-5U + NOBLE qv (from scratch)     | Nonlinear branch — likely better than LoRA |
+| LOW      | 10L-1U + LoRA r128 qv (1H overnight) | Give 1U a real chance                      |
 
 ### Moving to NOBLE
+
 The LoRA results suggest that **linear adapters are rank-limited** for this task. A rank-64 LoRA is a 65K-param linear bottleneck — it can differentiate steps but only through linear transformations. NOBLE's nonlinear branch `σ(xW_down)W_up` can learn genuinely different activation patterns per step, which is more expressive at the same parameter budget.
 
 NOBLE is also designed for training from scratch (not fine-tuning), which matches this use case exactly.
@@ -144,11 +148,11 @@ NOBLE is also designed for training from scratch (not fine-tuning), which matche
 
 ## Summary Table
 
-| Question | Answer |
-|---|---|
-| Does LoRA help on 5U? | Unclear — needs fair comparison (fix batch size first) |
-| Does LoRA help on 1U? | No — 1U is too constrained, LoRA doesn't compensate |
-| Best LoRA rank? | r64 > r16; r128 untested, likely better |
-| Best location? | qv-attn — matches qkvo at lower cost |
-| FFN adapters worth it? | No — too slow, crashed at 5U+all |
-| Should we try NOBLE? | **Yes** — more expressive, designed for training from scratch |
+| Question               | Answer                                                        |
+|------------------------|---------------------------------------------------------------|
+| Does LoRA help on 5U?  | Unclear — needs fair comparison (fix batch size first)        |
+| Does LoRA help on 1U?  | No — 1U is too constrained, LoRA doesn't compensate           |
+| Best LoRA rank?        | r64 > r16; r128 untested, likely better                       |
+| Best location?         | qv-attn — matches qkvo at lower cost                          |
+| FFN adapters worth it? | No — too slow, crashed at 5U+all                              |
+| Should we try NOBLE?   | **Yes** — more expressive, designed for training from scratch |

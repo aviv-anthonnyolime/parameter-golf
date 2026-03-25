@@ -14,7 +14,7 @@
 Instead of 10 distinct layers with 10 separate weight tensors, you have K unique layers reused N times each.
 The total effective depth is K × N but you only store K layers worth of parameters.
 
-```
+```markdown
 Standard:   L1 → L2 → L3 → L4 → L5 → L6 → L7 → L8 → L9 → L10   (10 weight sets)
 UT (A/B×5): A  →  B  →  A  →  B  →  A  →  B  →  A  →  B  →  A  →  B   (2 weight sets)
 ```
@@ -43,18 +43,18 @@ Replace the single FFN in each transformer layer with N expert FFNs.
 A router network looks at each token and selects the best k experts for it.
 Only k/N of the FFNs actually run per token — sparse computation.
 
-```
+```markdown
 Token → Router → [Expert 1, Expert 2, Expert 3, Expert 4]
                           ↑ top-1 selected, rest skipped
 ```
 
 **Sparse (top-k) vs Dense (weighted average):**
 
-| Mode | Compute | Gradient | Collapse risk |
-| ------|---------|----------|---------------|
-| Top-1 sparse | cheapest | none through routing | high |
-| Top-2 sparse | moderate | none through routing | moderate |
-| Dense (weighted avg) | all experts run | clean, fully differentiable | none |
+| Mode                 | Compute         | Gradient                    | Collapse risk |
+|----------------------|-----------------|-----------------------------|---------------|
+| Top-1 sparse         | cheapest        | none through routing        | high          |
+| Top-2 sparse         | moderate        | none through routing        | moderate      |
+| Dense (weighted avg) | all experts run | clean, fully differentiable | none          |
 
 For **full-size experts**: use sparse (Top-1 or Top-2). Dense routing with full experts = N× compute = fewer training steps = net loss.
 
@@ -84,11 +84,11 @@ output ∈ ℝ^512
 
 **Why it matters for parameter budget:**
 
-| Setup | Experts | Params |
-|-------|---------|--------|
-| Standard MoE (d=512, mlp=1024) | 4 | ~4.0M |
-| Latent MoE (d'=128, mlp=256) | 4 | ~0.3M |
-| Latent MoE (d'=128, mlp=256) | **16** | ~0.7M |
+| Setup                          | Experts | Params |
+|--------------------------------|---------|--------|
+| Standard MoE (d=512, mlp=1024) | 4       | ~4.0M  |
+| Latent MoE (d'=128, mlp=256)   | 4       | ~0.3M  |
+| Latent MoE (d'=128, mlp=256)   | **16**  | ~0.7M  |
 
 Same param budget → 4× more experts → more routing diversity.
 
@@ -107,7 +107,7 @@ d'=128 is a reasonable starting point for d=512. Test d'=64 vs d'=256 to measure
 Keep one full shared FFN (base expert). Add N small LoRA adapters.
 Each "expert" is: `base_FFN(x) + B_i(A_i(x))` where A_i ∈ ℝ^{r×d}, B_i ∈ ℝ^{d×r}.
 
-```
+```markdown
 x → shared_FFN(x)   +   router_weight_i × B_i(A_i(x))   (for all i, summed)
         full cost           tiny cost (rank r per adapter)
 ```
@@ -132,12 +132,12 @@ Baseline: hidden=512, 10 layers, ~17M params, ~14.7MB artifact (int8 + fp16 embe
 
 Rough per-layer cost at different widths (attention + FFN, int8):
 
-| hidden | mlp | ~MB/layer | Layers in ~13MB |
-|--------|-----|-----------|-----------------|
-| 512 | 1024 | ~1.3MB | 10 |
-| 640 | 1280 | ~2.0MB | 6-7 |
-| 768 | 1536 | ~2.9MB | 4-5 |
-| 1024 | 2048 | ~5.2MB | 2-3 |
+| hidden | mlp  | ~MB/layer | Layers in ~13MB |
+|--------|------|-----------|-----------------|
+| 512    | 1024 | ~1.3MB    | 10              |
+| 640    | 1280 | ~2.0MB    | 6-7             |
+| 768    | 1536 | ~2.9MB    | 4-5             |
+| 1024   | 2048 | ~5.2MB    | 2-3             |
 
 **Rule of thumb before every experiment:** estimate MB cost. If it doesn't fit in ~13MB (leaving ~2-3MB for embedding), don't run it.
 
@@ -162,29 +162,29 @@ Use 3 seeds (1337, 42, 7) for anything that looks promising. Single seed for ear
 
 Goal: find if weight tying helps and what unique-layer / width trade-off works best.
 
-| ID | Unique layers | Steps | Eff. depth | Hidden | Est. params | Notes |
-|----|--------------|-------|-----------|--------|-------------|-------|
-| UT-0 | 10 | 1 | 10 | 512 | baseline | sanity check |
-| UT-1 | 5 | 2 | 10 | 512 | same | gentle tying |
-| UT-2 | 2 (A/B) | 5 | 10 | 512 | ~8M | A/B specialization |
-| UT-3 | 1 | 10 | 10 | 512 | ~6M | extreme sharing |
-| UT-4 | 2 (A/B) | 5 | 10 | 640 | ~12M | wider with saved params |
-| UT-5 | 2 (A/B) | 5 | 10 | 768 | ~16M | push width limit |
-| UT-6 | 2 (A/B) | 7 | 14 | 512 | ~10M | more depth instead |
-| UT-7 | 3 | 4 | 12 | 640 | ~15M | middle ground |
+| ID   | Unique layers | Steps | Eff. depth | Hidden | Est. params | Notes                   |
+|------|---------------|-------|------------|--------|-------------|-------------------------|
+| UT-0 | 10            | 1     | 10         | 512    | baseline    | sanity check            |
+| UT-1 | 5             | 2     | 10         | 512    | same        | gentle tying            |
+| UT-2 | 2 (A/B)       | 5     | 10         | 512    | ~8M         | A/B specialization      |
+| UT-3 | 1             | 10    | 10         | 512    | ~6M         | extreme sharing         |
+| UT-4 | 2 (A/B)       | 5     | 10         | 640    | ~12M        | wider with saved params |
+| UT-5 | 2 (A/B)       | 5     | 10         | 768    | ~16M        | push width limit        |
+| UT-6 | 2 (A/B)       | 7     | 14         | 512    | ~10M        | more depth instead      |
+| UT-7 | 3             | 4     | 12         | 640    | ~15M        | middle ground           |
 
 ### Phase 1 Results
 
 **Key outcome: weight tying works, but no UT config beat the baseline on wall-clock.**
 
-| Config | Val Loss | Val BPB | ms/step | Size MB | Verdict |
-|--------|----------|---------|---------|---------|---------|
-| **Baseline 9L-512d** | **2.0900** | **1.2378** | **548.5** | **15.08** | **Winner** |
-| 10L-5U-768d | 2.1992 | 1.3025 | 1054.9 | 18.57 | Best per-step BUT over 16MB, 2x slower |
-| 14L-7U-640d | 2.2099 | 1.3088 | 1209.5 | — | Crashed (TTT OOM) |
-| 12L-6U-512d | 2.2387 | 1.3259 | 689.0 | 10.19 | Best 512d UT |
-| 10L-5U-512d | 2.2538 | 1.3348 | 579.5 | 8.51 | Best speed/quality trade-off |
-| 10L-1U-512d | 2.4994 | 1.4803 | 595.9 | 2.06 | Extreme sharing hurts |
+| Config               | Val Loss   | Val BPB    | ms/step   | Size MB   | Verdict                                |
+|----------------------|------------|------------|-----------|-----------|----------------------------------------|
+| **Baseline 9L-512d** | **2.0900** | **1.2378** | **548.5** | **15.08** | **Winner**                             |
+| 10L-5U-768d          | 2.1992     | 1.3025     | 1054.9    | 18.57     | Best per-step BUT over 16MB, 2x slower |
+| 14L-7U-640d          | 2.2099     | 1.3088     | 1209.5    | —         | Crashed (TTT OOM)                      |
+| 12L-6U-512d          | 2.2387     | 1.3259     | 689.0     | 10.19     | Best 512d UT                           |
+| 10L-5U-512d          | 2.2538     | 1.3348     | 579.5     | 8.51      | Best speed/quality trade-off           |
+| 10L-1U-512d          | 2.4994     | 1.4803     | 595.9     | 2.06      | Extreme sharing hurts                  |
 
 **Why baseline wins:** it's the fastest (548 ms/step → most steps in the time budget). UT saves params but the freed budget goes to wider dims → slower ms/step → fewer training steps.
 
@@ -233,40 +233,40 @@ Both must run **with warmdown** (Phase 1 runs lacked warmdown, giving baseline a
 
 Test each method as a per-step adapter on the primary base. One adapter per UT step (10 adapters total for 10L). All applied to both attention projections and MLP.
 
-| Method | Key Idea | Params/adapter (rank 8, d=512) | ms/step overhead | Why test it |
-|--------|----------|-------------------------------|-----------------|-------------|
-| **LoRA** | Low-rank A×B decomposition | ~8K per matrix | ~1-2% | Baseline PEFT, well understood |
-| **AdaLoRA** | Adaptive rank allocation via SVD | ~8K (adapts during training) | ~3-5% | May allocate rank where it matters most |
-| **DoRA** | Weight-decomposed LoRA (magnitude + direction) | ~8K + magnitude vector | ~2-3% | Better training dynamics than LoRA |
-| **MoRA** | High-rank via square matrices with compression | ~8K but effective rank higher | ~3-5% | More expressivity at same param count |
-| **VeRA** | Shared random projections + per-layer scaling | ~1K (just scaling vectors) | ~1% | Extreme param efficiency, almost free |
-| **LoHa** | Low-rank Hadamard product | ~8K per matrix | ~2-3% | Captures multiplicative interactions |
+| Method      | Key Idea                                       | Params/adapter (rank 8, d=512) | ms/step overhead | Why test it                             |
+|-------------|------------------------------------------------|--------------------------------|------------------|-----------------------------------------|
+| **LoRA**    | Low-rank A×B decomposition                     | ~8K per matrix                 | ~1-2%            | Baseline PEFT, well understood          |
+| **AdaLoRA** | Adaptive rank allocation via SVD               | ~8K (adapts during training)   | ~3-5%            | May allocate rank where it matters most |
+| **DoRA**    | Weight-decomposed LoRA (magnitude + direction) | ~8K + magnitude vector         | ~2-3%            | Better training dynamics than LoRA      |
+| **MoRA**    | High-rank via square matrices with compression | ~8K but effective rank higher  | ~3-5%            | More expressivity at same param count   |
+| **VeRA**    | Shared random projections + per-layer scaling  | ~1K (just scaling vectors)     | ~1%              | Extreme param efficiency, almost free   |
+| **LoHa**    | Low-rank Hadamard product                      | ~8K per matrix                 | ~2-3%            | Captures multiplicative interactions    |
 
 > You will fill in the paper links, GitHub repos, and implementation details in the table below after reviewing each method.
 
 ### PEFT Reference Table (to be completed)
 
-| Order | Method | Main idea | Canonical paper | Relevance for your Universal Transformer setup | Example implementation(s) |
-|---|---|---|---|---|---|
-| 1 | **LoRA** | Adds a low-rank residual update to a weight matrix instead of a full dense extra matrix. | **Hu et al., 2021 — _LoRA: Low-Rank Adaptation of Large Language Models_**  [oai_citation:0‡arXiv](https://arxiv.org/abs/2106.09685?utm_source=chatgpt.com) | **Very relevant baseline.** Best first test for adding per-layer or per-step extra capacity to a shared UT block because it is simple, stable, and easy to port to your own layers.  [oai_citation:1‡arXiv](https://arxiv.org/abs/2106.09685?utm_source=chatgpt.com) | **microsoft/LoRA** (`loralib`)  [oai_citation:2‡GitHub](https://github.com/microsoft/LoRA?utm_source=chatgpt.com) |
-| 2 | **NOBLE** | Adds a **nonlinear low-rank branch** to linear layers: \( \sigma(xW_{down})W_{up} \). Designed as a permanent architectural component for training from scratch. | **Smith, 2026 — _NOBLE: Accelerating Transformers with Nonlinear Low-Rank Branches_** | **Extremely relevant.** Very close to your goal because you want extra per-layer / per-step expressiveness during training, not PEFT on a frozen model. | **ethansmith2000/noble** |
-| 3 | **DoRA** | Splits the weight behavior into **magnitude** and **direction**, and applies LoRA-style adaptation mainly to the direction. | **Liu et al., 2024 — _DoRA: Weight-Decomposed Low-Rank Adaptation_**  [oai_citation:3‡arXiv](https://arxiv.org/pdf/2402.09353?utm_source=chatgpt.com) | **Very relevant.** Good next test if plain LoRA feels too restrictive and you want richer geometry in the shared recurrent block.  [oai_citation:4‡arXiv](https://arxiv.org/pdf/2402.09353?utm_source=chatgpt.com) | **NVlabs/DoRA**  [oai_citation:5‡GitHub](https://github.com/NVlabs/DoRA?utm_source=chatgpt.com), **nbasyl/DoRA**  [oai_citation:6‡GitHub](https://github.com/nbasyl/DoRA?utm_source=chatgpt.com) |
-| 4 | **MoRA** | Replaces LoRA's low-rank bottleneck with a **higher-rank update** while keeping a similar trainable parameter budget. | **Jiang et al., 2024 — _MoRA: High-Rank Updating for Parameter-Efficient Fine-Tuning_**  [oai_citation:7‡arXiv](https://arxiv.org/abs/2405.12130?utm_source=chatgpt.com) | **Probably the most aligned with your goal.** Your target is more expressiveness inside a shared block, and MoRA was proposed exactly because low-rank updates can be too limiting.  [oai_citation:8‡arXiv](https://arxiv.org/abs/2405.12130?utm_source=chatgpt.com) | **kongds/MoRA**  [oai_citation:9‡GitHub](https://github.com/kongds/MoRA?utm_source=chatgpt.com) |
-| 5 | **LoHa** | Uses low-rank factors combined with a **Hadamard product** to obtain a more expressive update than plain LoRA. | In practice it is commonly tied to the **LyCORIS** ecosystem; HF PEFT explicitly links LoHa to the **FedPara** Hadamard-style parameterization, and the LyCORIS paper documents LoHa/LoKr as implemented methods.  [oai_citation:10‡Hugging Face](https://huggingface.co/docs/peft/main/package_reference/loha?utm_source=chatgpt.com) | **Interesting experimental option.** Worth testing if you want “more expressive than LoRA” without jumping to a full dense extra matrix.  [oai_citation:11‡Hugging Face](https://huggingface.co/docs/peft/main/package_reference/loha?utm_source=chatgpt.com) | **HF PEFT LoHa**  [oai_citation:12‡Hugging Face](https://huggingface.co/docs/peft/main/package_reference/loha?utm_source=chatgpt.com), **LyCORIS** docs/examples  [oai_citation:13‡GitHub](https://github.com/KohakuBlueleaf/LyCORIS/blob/main/docs/Demo.md?utm_source=chatgpt.com) |
-| 6 | **AdaLoRA** | Learns how to **reallocate rank budget** across layers/modules instead of keeping the same rank everywhere. | **Zhang et al., 2023 — _AdaLoRA: Adaptive Budget Allocation for Parameter-Efficient Fine-Tuning_**  [oai_citation:14‡arXiv](https://arxiv.org/abs/2303.10512?utm_source=chatgpt.com) | **Moderately relevant.** More useful if you want the model to learn which UT modules or recurrent steps deserve more capacity; less essential as a first expressiveness benchmark.  [oai_citation:15‡arXiv](https://arxiv.org/abs/2303.10512?utm_source=chatgpt.com) | **QingruZhang/AdaLoRA**  [oai_citation:16‡GitHub](https://github.com/QingruZhang/AdaLoRA?utm_source=chatgpt.com), also merged into **HF PEFT** according to the repo.  [oai_citation:17‡GitHub](https://github.com/QingruZhang/AdaLoRA?utm_source=chatgpt.com) |
-| 7 | **VeRA** | Shares a pair of random low-rank matrices across layers and learns only small scaling vectors. | **Kopiczko et al., 2023/2024 — _VeRA: Vector-based Random Matrix Adaptation_**  [oai_citation:18‡arXiv](https://arxiv.org/abs/2310.11454?utm_source=chatgpt.com) | **Less relevant for your main objective.** Good when trainable/storage budget is the main pain point, but less compelling when your priority is maximizing expressiveness in a shared block.  [oai_citation:19‡arXiv](https://arxiv.org/abs/2310.11454?utm_source=chatgpt.com) | **HF PEFT VeRA**  [oai_citation:20‡Hugging Face](https://huggingface.co/docs/peft/package_reference/vera?utm_source=chatgpt.com) |
+| Order | Method      | Main idea                                                                                                                                                        | Canonical paper                                                                                                                                                                                                                                                                                                                        | Relevance for your Universal Transformer setup                                                                                                                                                                                                                                 | Example implementation(s)                                                                                                                                                                                                                                                           |
+|-------|-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1     | **LoRA**    | Adds a low-rank residual update to a weight matrix instead of a full dense extra matrix.                                                                         | **Hu et al., 2021 — _LoRA: Low-Rank Adaptation of Large Language Models_**  [oai_citation:0‡arXiv](https://arxiv.org/abs/2106.09685?utm_source=chatgpt.com)                                                                                                                                                                            | **Very relevant baseline.** Best first test for adding per-layer or per-step extra capacity to a shared UT block because it is simple, stable, and easy to port to your own layers.  [oai_citation:1‡arXiv](https://arxiv.org/abs/2106.09685?utm_source=chatgpt.com)           | **microsoft/LoRA** (`loralib`)  [oai_citation:2‡GitHub](https://github.com/microsoft/LoRA?utm_source=chatgpt.com)                                                                                                                                                                   |
+| 2     | **NOBLE**   | Adds a **nonlinear low-rank branch** to linear layers: \( \sigma(xW_{down})W_{up} \). Designed as a permanent architectural component for training from scratch. | **Smith, 2026 — _NOBLE: Accelerating Transformers with Nonlinear Low-Rank Branches_**                                                                                                                                                                                                                                                  | **Extremely relevant.** Very close to your goal because you want extra per-layer / per-step expressiveness during training, not PEFT on a frozen model.                                                                                                                        | **ethansmith2000/noble**                                                                                                                                                                                                                                                            |
+| 3     | **DoRA**    | Splits the weight behavior into **magnitude** and **direction**, and applies LoRA-style adaptation mainly to the direction.                                      | **Liu et al., 2024 — _DoRA: Weight-Decomposed Low-Rank Adaptation_**  [oai_citation:3‡arXiv](https://arxiv.org/pdf/2402.09353?utm_source=chatgpt.com)                                                                                                                                                                                  | **Very relevant.** Good next test if plain LoRA feels too restrictive and you want richer geometry in the shared recurrent block.  [oai_citation:4‡arXiv](https://arxiv.org/pdf/2402.09353?utm_source=chatgpt.com)                                                             | **NVlabs/DoRA**  [oai_citation:5‡GitHub](https://github.com/NVlabs/DoRA?utm_source=chatgpt.com), **nbasyl/DoRA**  [oai_citation:6‡GitHub](https://github.com/nbasyl/DoRA?utm_source=chatgpt.com)                                                                                    |
+| 4     | **MoRA**    | Replaces LoRA's low-rank bottleneck with a **higher-rank update** while keeping a similar trainable parameter budget.                                            | **Jiang et al., 2024 — _MoRA: High-Rank Updating for Parameter-Efficient Fine-Tuning_**  [oai_citation:7‡arXiv](https://arxiv.org/abs/2405.12130?utm_source=chatgpt.com)                                                                                                                                                               | **Probably the most aligned with your goal.** Your target is more expressiveness inside a shared block, and MoRA was proposed exactly because low-rank updates can be too limiting.  [oai_citation:8‡arXiv](https://arxiv.org/abs/2405.12130?utm_source=chatgpt.com)           | **kongds/MoRA**  [oai_citation:9‡GitHub](https://github.com/kongds/MoRA?utm_source=chatgpt.com)                                                                                                                                                                                     |
+| 5     | **LoHa**    | Uses low-rank factors combined with a **Hadamard product** to obtain a more expressive update than plain LoRA.                                                   | In practice it is commonly tied to the **LyCORIS** ecosystem; HF PEFT explicitly links LoHa to the **FedPara** Hadamard-style parameterization, and the LyCORIS paper documents LoHa/LoKr as implemented methods.  [oai_citation:10‡Hugging Face](https://huggingface.co/docs/peft/main/package_reference/loha?utm_source=chatgpt.com) | **Interesting experimental option.** Worth testing if you want “more expressive than LoRA” without jumping to a full dense extra matrix.  [oai_citation:11‡Hugging Face](https://huggingface.co/docs/peft/main/package_reference/loha?utm_source=chatgpt.com)                  | **HF PEFT LoHa**  [oai_citation:12‡Hugging Face](https://huggingface.co/docs/peft/main/package_reference/loha?utm_source=chatgpt.com), **LyCORIS** docs/examples  [oai_citation:13‡GitHub](https://github.com/KohakuBlueleaf/LyCORIS/blob/main/docs/Demo.md?utm_source=chatgpt.com) |
+| 6     | **AdaLoRA** | Learns how to **reallocate rank budget** across layers/modules instead of keeping the same rank everywhere.                                                      | **Zhang et al., 2023 — _AdaLoRA: Adaptive Budget Allocation for Parameter-Efficient Fine-Tuning_**  [oai_citation:14‡arXiv](https://arxiv.org/abs/2303.10512?utm_source=chatgpt.com)                                                                                                                                                   | **Moderately relevant.** More useful if you want the model to learn which UT modules or recurrent steps deserve more capacity; less essential as a first expressiveness benchmark.  [oai_citation:15‡arXiv](https://arxiv.org/abs/2303.10512?utm_source=chatgpt.com)           | **QingruZhang/AdaLoRA**  [oai_citation:16‡GitHub](https://github.com/QingruZhang/AdaLoRA?utm_source=chatgpt.com), also merged into **HF PEFT** according to the repo.  [oai_citation:17‡GitHub](https://github.com/QingruZhang/AdaLoRA?utm_source=chatgpt.com)                      |
+| 7     | **VeRA**    | Shares a pair of random low-rank matrices across layers and learns only small scaling vectors.                                                                   | **Kopiczko et al., 2023/2024 — _VeRA: Vector-based Random Matrix Adaptation_**  [oai_citation:18‡arXiv](https://arxiv.org/abs/2310.11454?utm_source=chatgpt.com)                                                                                                                                                                       | **Less relevant for your main objective.** Good when trainable/storage budget is the main pain point, but less compelling when your priority is maximizing expressiveness in a shared block.  [oai_citation:19‡arXiv](https://arxiv.org/abs/2310.11454?utm_source=chatgpt.com) | **HF PEFT VeRA**  [oai_citation:20‡Hugging Face](https://huggingface.co/docs/peft/package_reference/vera?utm_source=chatgpt.com)                                                                                                                                                    |
 
 ### Adapter Location Options
 
 Each PEFT method can target different subsets of projections. Use the `adapter_location` parameter to control this:
 
-| `adapter_location` | Q | K | V | O | MLP fc | MLP proj | Use case |
-|---|---|---|---|---|---|---|---|
-| `"qv-attn"` | yes | - | yes | - | - | - | Classic LoRA (Hu et al.) — minimal, cheapest |
-| `"qkvo-attn"` | yes | yes | yes | yes | - | - | Full attention adaptation |
-| `"ffn"` | - | - | - | - | yes | yes | MLP-only adaptation |
-| `"qv-attn-ffn"` | yes | - | yes | - | yes | yes | Q/V + MLP — good default |
-| `"all"` | yes | yes | yes | yes | yes | yes | Everything — most params, most expressive |
+| `adapter_location` | Q   | K   | V   | O   | MLP fc | MLP proj | Use case                                     |
+|--------------------|-----|-----|-----|-----|--------|----------|----------------------------------------------|
+| `"qv-attn"`        | yes | -   | yes | -   | -      | -        | Classic LoRA (Hu et al.) — minimal, cheapest |
+| `"qkvo-attn"`      | yes | yes | yes | yes | -      | -        | Full attention adaptation                    |
+| `"ffn"`            | -   | -   | -   | -   | yes    | yes      | MLP-only adaptation                          |
+| `"qv-attn-ffn"`    | yes | -   | yes | -   | yes    | yes      | Q/V + MLP — good default                     |
+| `"all"`            | yes | yes | yes | yes | yes    | yes      | Everything — most params, most expressive    |
 
 **Recommendation:** start with `"qv-attn"` (the original LoRA targets) for rank sweeps, then test `"qv-attn-ffn"` to see if MLP adapters add value. Only use `"all"` if param budget allows — K and O adapters have diminishing returns in most settings.
 
@@ -274,30 +274,30 @@ Each PEFT method can target different subsets of projections. Use the `adapter_l
 
 **Step 1 — LoRA baseline (rank sweep):**
 
-| ID | Base | Method | Rank | Notes |
-|----|------|--------|------|-------|
-| PEFT-L4 | 10L-5U-512d | LoRA | 4 | minimal |
-| PEFT-L8 | 10L-5U-512d | LoRA | 8 | sweet spot expected |
-| PEFT-L16 | 10L-5U-512d | LoRA | 16 | more capacity |
+| ID       | Base        | Method | Rank | Notes               |
+|----------|-------------|--------|------|---------------------|
+| PEFT-L4  | 10L-5U-512d | LoRA   | 4    | minimal             |
+| PEFT-L8  | 10L-5U-512d | LoRA   | 8    | sweet spot expected |
+| PEFT-L16 | 10L-5U-512d | LoRA   | 16   | more capacity       |
 
 All with warmdown. This establishes the LoRA baseline to beat.
 
 **Step 2 — Method comparison (fixed rank 8):**
 
-| ID | Base | Method | Rank | Notes |
-|----|------|--------|------|-------|
-| PEFT-AL | 10L-5U-512d | AdaLoRA | 8 (initial) | adaptive rank — does it help? |
-| PEFT-DO | 10L-5U-512d | DoRA | 8 | better training stability? |
-| PEFT-MO | 10L-5U-512d | MoRA | 8 | higher effective rank? |
-| PEFT-VE | 10L-5U-512d | VeRA | — | minimal params — how far can you go? |
-| PEFT-LH | 10L-5U-512d | LoHa | 8 | multiplicative interactions |
+| ID      | Base        | Method  | Rank        | Notes                                |
+|---------|-------------|---------|-------------|--------------------------------------|
+| PEFT-AL | 10L-5U-512d | AdaLoRA | 8 (initial) | adaptive rank — does it help?        |
+| PEFT-DO | 10L-5U-512d | DoRA    | 8           | better training stability?           |
+| PEFT-MO | 10L-5U-512d | MoRA    | 8           | higher effective rank?               |
+| PEFT-VE | 10L-5U-512d | VeRA    | —           | minimal params — how far can you go? |
+| PEFT-LH | 10L-5U-512d | LoHa    | 8           | multiplicative interactions          |
 
 Compare all at rank 8 (or equivalent param budget for VeRA). 20 min runs to screen, 1H for the winner.
 
 **Step 3 — Winner on 768d trimmed (if any PEFT beats baseline):**
 
-| ID | Base | Method | Rank | Notes |
-|----|------|--------|------|-------|
+| ID         | Base             | Method | Rank      | Notes                               |
+|------------|------------------|--------|-----------|-------------------------------------|
 | PEFT-768-W | 10L-5U-768d-trim | winner | best rank | 1.5x MLP, 2 KV heads, with warmdown |
 
 This tests whether the 768d wider model + PEFT + size reduction can finally beat the baseline.
@@ -318,22 +318,22 @@ Standard 10-layer transformer, MoE replacing FFN only (not attention).
 
 ### 3A — Standard sparse MoE
 
-| ID | Experts | Top-k | Load balance α | Notes |
-|----|---------|-------|----------------|-------|
-| MoE-S1 | 2 | 1 | 0.01 | minimal |
-| MoE-S2 | 4 | 1 | 0.01 | standard |
-| MoE-S3 | 4 | 2 | 0.01 | denser |
-| MoE-S4 | 8 | 2 | 0.01 | many experts |
+| ID     | Experts | Top-k | Load balance α | Notes        |
+|--------|---------|-------|----------------|--------------|
+| MoE-S1 | 2       | 1     | 0.01           | minimal      |
+| MoE-S2 | 4       | 1     | 0.01           | standard     |
+| MoE-S3 | 4       | 2     | 0.01           | denser       |
+| MoE-S4 | 8       | 2     | 0.01           | many experts |
 
 ### 3B — Latent MoE (dense routing)
 
-| ID | Experts | d' | Notes |
-|----|---------|-----|-------|
-| MoE-L1 | 4 | 256 | low compression |
-| MoE-L2 | 4 | 128 | medium compression |
-| MoE-L3 | 8 | 128 | more experts |
-| MoE-L4 | 16 | 64 | many tiny experts |
-| MoE-L5 | 16 | 128 | wider latent |
+| ID     | Experts | d'  | Notes              |
+|--------|---------|-----|--------------------|
+| MoE-L1 | 4       | 256 | low compression    |
+| MoE-L2 | 4       | 128 | medium compression |
+| MoE-L3 | 8       | 128 | more experts       |
+| MoE-L4 | 16      | 64  | many tiny experts  |
+| MoE-L5 | 16      | 128 | wider latent       |
 
 **Key comparison:** MoE-L3 (8 experts, d'=128) vs MoE-S2 (4 full experts) at similar total params.
 That's the direct test of whether latent design is worth it.
@@ -345,12 +345,12 @@ That's the direct test of whether latent design is worth it.
 
 ### 3C — LoRA experts (dense routing)
 
-| ID | Experts | LoRA rank | Notes |
-|----|---------|-----------|-------|
-| MoE-R1 | 4 | 8 | cheap diversity |
-| MoE-R2 | 8 | 8 | more adapters |
-| MoE-R3 | 4 | 32 | higher rank |
-| MoE-R4 | 8 | 16 | balanced |
+| ID     | Experts | LoRA rank | Notes           |
+|--------|---------|-----------|-----------------|
+| MoE-R1 | 4       | 8         | cheap diversity |
+| MoE-R2 | 8       | 8         | more adapters   |
+| MoE-R3 | 4       | 32        | higher rank     |
+| MoE-R4 | 8       | 16        | balanced        |
 
 All use dense routing (weighted average). No load balancing loss needed.
 
@@ -360,12 +360,12 @@ All use dense routing (weighted average). No load balancing loss needed.
 
 **Only run combinations where both components showed improvement individually.**
 
-| ID | Combination | Notes |
-|----|-------------|-------|
-| COMBO-1 | UT-best + LoRA experts (dense) | depth sharing + cheap capacity |
-| COMBO-2 | UT-best + Latent MoE | depth sharing + bottleneck experts |
-| COMBO-3 | UT-best + per-step LoRA + LoRA experts | LoRA for steps AND experts |
-| COMBO-4 | Standard transformer + Latent MoE + LoRA experts | latent + delta |
+| ID      | Combination                                      | Notes                              |
+|---------|--------------------------------------------------|------------------------------------|
+| COMBO-1 | UT-best + LoRA experts (dense)                   | depth sharing + cheap capacity     |
+| COMBO-2 | UT-best + Latent MoE                             | depth sharing + bottleneck experts |
+| COMBO-3 | UT-best + per-step LoRA + LoRA experts           | LoRA for steps AND experts         |
+| COMBO-4 | Standard transformer + Latent MoE + LoRA experts | latent + delta                     |
 
 For COMBO-3: be careful with param budget. Two sets of LoRA (one per step, one per expert) can add up.
 Calculate before running.
@@ -374,7 +374,7 @@ Calculate before running.
 
 ## Phase 5 — Full Architecture (if you're still having fun)
 
-```
+```markdown
 Input x
 │
 ├── [UT] 2 unique layers (A/B), repeated 5 times
@@ -403,7 +403,7 @@ This is underparameterized. Use saved params for wider hidden (768) or more late
 
 ## Decision Tree
 
-```
+```markdown
 Phase 1: UT
 ├── UT within 0.02 bpb of baseline?
 │   ├── YES → Phase 2 (per-step LoRA)
@@ -432,15 +432,15 @@ Phase 4: Combinations
 
 ## What You'll Learn Regardless of Results
 
-| Experiment | What you learn |
-|------------|----------------|
-| UT-0 vs UT-2 | how much tying hurts raw expressivity |
-| UT-2 vs UT-4 | whether width > depth for this task |
-| UT-2 vs UT-6 | whether more steps > wider at fixed params |
-| MoE-L1 vs MoE-L2 | how much the bottleneck costs |
-| MoE-L3 vs MoE-S2 | latent experts vs full experts (same params) |
-| MoE-R2 vs MoE-S2 | LoRA experts vs full experts |
-| COMBO-1 vs UT-best | whether MoE adds anything on top of UT |
+| Experiment         | What you learn                               |
+|--------------------|----------------------------------------------|
+| UT-0 vs UT-2       | how much tying hurts raw expressivity        |
+| UT-2 vs UT-4       | whether width > depth for this task          |
+| UT-2 vs UT-6       | whether more steps > wider at fixed params   |
+| MoE-L1 vs MoE-L2   | how much the bottleneck costs                |
+| MoE-L3 vs MoE-S2   | latent experts vs full experts (same params) |
+| MoE-R2 vs MoE-S2   | LoRA experts vs full experts                 |
+| COMBO-1 vs UT-best | whether MoE adds anything on top of UT       |
 
 Even if everything loses to the baseline by 0.1 bpb, you will have calibrated intuition for:
 

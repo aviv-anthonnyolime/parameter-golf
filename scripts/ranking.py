@@ -356,19 +356,24 @@ def print_table(entries, sort_by=None, show_proj=False, show_wb=False,
 
     STATE_ICON = {"finished": " ", "crashed": "!", "running": "~"}
 
+    # Dynamic column widths based on data
+    pw = max(len("Params"), max((len(e.get("params_tag", "?")) for e in entries), default=6))
+    dw = max(len("Docker Name"), max((len(e.get("docker_name", "?")) for e in entries), default=11))
+    ew = max(len("Experiment"), max((len(e.get("experiment", "?")) for e in entries), default=10))
+
     # Header
     state_col = " S" if show_state else ""
     extra_cols = ""
     if show_proj:
-        extra_cols += f" {'proj_loss':>10} {'proj_bpb':>9}"
+        extra_cols += f"  {'proj_loss':>10} {'proj_bpb':>9}"
     if show_wb:
-        extra_cols += f" {'wb_loss':>8} {'wb_bpb':>8}"
+        extra_cols += f"  {'wb_loss':>8} {'wb_bpb':>8}"
     if show_h100:
-        extra_cols += f" {'H100ms':>7} {'H100stp':>8} {'H100loss':>9}"
+        extra_cols += f"  {'H100ms':>7} {'H100stp':>8} {'H100loss':>9}"
     hdr = (
-        f"{'Rank':>4}  {'Docker Name':<20} {'Experiment':<12} "
-        f"{'val_bpb':>8} {'bpb_int8':>9} {'bpb_ttt':>8} "
-        f"{'loss':>7} {'ms/step':>8} {'steps':>6} {'size_MB':>8} {'Params':>18}"
+        f"{'Rank':>4}  {'Docker Name':<{dw}}  {'Experiment':<{ew}}  "
+        f"{'val_bpb':>8} {'bpb_int8':>9} {'bpb_ttt':>8}  "
+        f"{'loss':>7} {'ms/step':>8} {'steps':>6} {'size_MB':>8}  {'Params':>{pw}}"
         f"{state_col}{extra_cols}"
     )
     sep = "-" * len(hdr)
@@ -382,10 +387,10 @@ def print_table(entries, sort_by=None, show_proj=False, show_wb=False,
         extra_str = ""
         if show_proj:
             pl, pb = e.get("proj_loss"), e.get("proj_bpb")
-            extra_str += f" {pl:>10.4f} {pb:>9.4f}" if pl is not None else f" {'N/A':>10} {'N/A':>9}"
+            extra_str += f"  {pl:>10.4f} {pb:>9.4f}" if pl is not None else f"  {'N/A':>10} {'N/A':>9}"
         if show_wb:
             wl, wb = e.get("wb_loss"), e.get("wb_bpb")
-            extra_str += f" {wl:>8.4f} {wb:>8.4f}" if wl is not None else f" {'N/A':>8} {'N/A':>8}"
+            extra_str += f"  {wl:>8.4f} {wb:>8.4f}" if wl is not None else f"  {'N/A':>8} {'N/A':>8}"
         if show_h100:
             hms = e.get("h100_ms")
             hstp = e.get("h100_steps")
@@ -393,12 +398,12 @@ def print_table(entries, sort_by=None, show_proj=False, show_wb=False,
             hms_s = f"{hms:>7.1f}" if hms is not None else f"{'N/A':>7}"
             hstp_s = f"{hstp:>8}" if hstp is not None else f"{'N/A':>8}"
             hloss_s = f"{hloss:>9.4f}" if hloss is not None else f"{'N/A':>9}"
-            extra_str += f" {hms_s} {hstp_s} {hloss_s}"
+            extra_str += f"  {hms_s} {hstp_s} {hloss_s}"
         print(
-            f"{i:>4}  {e.get('docker_name', '?'):<20} {e.get('experiment', '?'):<12} "
-            f"{e.get('val_bpb') or 0:>8.4f} {e.get('val_bpb_int8') or 0:>9.4f} {e.get('val_bpb_ttt') or 0:>8.4f} "
+            f"{i:>4}  {e.get('docker_name', '?'):<{dw}}  {e.get('experiment', '?'):<{ew}}  "
+            f"{e.get('val_bpb') or 0:>8.4f} {e.get('val_bpb_int8') or 0:>9.4f} {e.get('val_bpb_ttt') or 0:>8.4f}  "
             f"{e.get('val_loss') or 0:>7.4f} {e.get('avg_ms_per_step') or 0:>8.1f} {e.get('total_steps') or 0:>6} "
-            f"{e.get('compressed_size_mb') or 0:>8.2f} {ptag:>18}"
+            f"{e.get('compressed_size_mb') or 0:>8.2f}  {ptag:>{pw}}"
             f"{state_str}{extra_str}"
         )
     print(sep)
